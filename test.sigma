@@ -1,0 +1,82 @@
+# This is a simple example source file for sigma lang
+
+fun add(a: Int, b: Int): Int {
+    return a + b
+}
+
+fun main(): Int {
+    # Basic types and variables
+    var anInt: Int = 10
+    print anInt
+    
+    var aFloat: Float = 10.87
+    print aFloat
+
+    var aBool: Bool = true
+    print aBool
+
+    var aStr: String = "hello world"
+    print aStr
+    
+    var al: [[Int]] = [[1, 2, 3]]
+
+    var aList: [Int] = [1, 2, 3, 4, 5]
+    print aList
+    
+    # Int operators
+    print -10
+    print 10 + 20
+    print 10 - 20
+    print 10 * 20
+    print 20 / 10
+    print 20 % 9
+    print 1 == 2
+    print 1 != 2
+    print 1 > 2
+    print 1 < 2
+    print 1 >= 2
+    print 1 <= 2
+
+    # Float operators
+    print 10.123 + 20.123
+    print 10.123 - 20.123
+    print 10.123 * 20.123
+    print 20.123 / 10.321
+    print 1.123 == 2.123
+    print 1.123 != 2.123
+    print 1.123 > 2.123
+    print 1.123 < 2.123
+    print 1.123 >= 2.123
+    print 1.123 <= 2.123
+
+    # Bool operators
+    print true and false
+    print true or false
+    print not true
+
+    # Function call
+    var result: Int = add(20, 10)
+    print result
+
+    # Control flow
+    if 1 == 1 {
+        print "hello"
+    }
+    elif 1 < 0 {
+
+    }
+    else {
+        print "bye"
+    }
+
+    var count: Int = 10
+    while count > 0 {
+        print count
+        count = count - 1
+    }
+    
+    aList[1] = aList[2]
+    print aList
+
+    return 0
+}

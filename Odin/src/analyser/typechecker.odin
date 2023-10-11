@@ -29,7 +29,7 @@ typecheck :: proc(an: ^Analyser) {
 
 @private
 tc_statement :: proc(an: ^Analyser, vars: ^Vars, stmt: ^p.Statement, func_id: string) {
-    #partial switch s in stmt {
+    switch s in stmt {
         case ^p.Variable_Decl_Stmt: tc_variable_decl_stmt(an, vars, s)
         case ^p.Return_Stmt: tc_return_stmt(an, vars, s, func_id)
         case ^p.Print_Stmt: tc_print_stmt(an, vars, s)

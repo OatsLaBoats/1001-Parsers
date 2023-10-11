@@ -2,6 +2,8 @@ package parser
 
 import "core:fmt"
 
+// TODO: Rethink the Type union its really messy to use right now, maybe it would be better to just have a struct with some info instead.
+
 Ast :: struct {
     functions: [dynamic]^Function_Decl,
 }

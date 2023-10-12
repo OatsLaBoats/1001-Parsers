@@ -2,8 +2,8 @@ package main
 
 import "core:fmt"
 import "core:os"
-import "core:mem/virtual"
 import "core:mem"
+import "core:strings"
 
 import "lexer"
 import "parser"
@@ -17,7 +17,39 @@ import "ast"
 
 main :: proc() {
     print_tokens := false
-    print_ast := true
+    print_ast := false
+    optimise := false
+    only_compile := false
+    filename: string = nil
+
+    for arg in os.args {
+        switch arg {
+            case "--print-ast": print_ast = true
+            case "--print-tokens": print_tokens = true
+            case "--print-all": {
+                print_ast = true
+                print_tokens = true
+            }
+            case "--fast": optimise = true
+            case "--only-compile": only_compile = true
+            case: {
+                if strings.has_suffix(arg, ".sigma") {
+                    if filename == nil do filename = arg
+                } else {
+                    fmt.println("Error: Script is not a '.sigma' file")
+                    os.exit(-1)
+                }
+            }
+        }
+    }
+    
+    // TODO: Activate this
+    /*
+    if filename == nil {
+        fmt.println("Error: No script provided")
+        os.exist(-1)
+    }
+    */
 
     contents, success := os.read_entire_file_from_filename("../test.sigma")
     defer delete(contents)

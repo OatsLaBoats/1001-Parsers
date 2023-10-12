@@ -4,9 +4,9 @@ package analyser
 
 import "core:fmt"
 
-import p "../parser"
+import "../ast"
 
-Vars :: map[string]p.Type
+Vars :: map[string]ast.Type
 
 @private
 typecheck :: proc(an: ^Analyser) {
@@ -28,44 +28,44 @@ typecheck :: proc(an: ^Analyser) {
 }
 
 @private
-tc_statement :: proc(an: ^Analyser, vars: ^Vars, stmt: ^p.Statement, func_id: string) {
+tc_statement :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Statement, func_id: string) {
     switch s in stmt {
-        case ^p.Variable_Decl_Stmt: tc_variable_decl_stmt(an, vars, s)
-        case ^p.Return_Stmt: tc_return_stmt(an, vars, s, func_id)
-        case ^p.Print_Stmt: tc_print_stmt(an, vars, s)
-        case ^p.While_Stmt: tc_while_stmt(an, vars, s, func_id)
-        case ^p.If_Stmt: tc_if_stmt(an, vars, s, func_id)
-        case ^p.Assignment_Stmt: tc_assignment_stmt(an, vars, s)
-        case ^p.Index_Assignment_Stmt: tc_index_stmt(an, vars, s)
+        case ^ast.Variable_Decl_Stmt: tc_variable_decl_stmt(an, vars, s)
+        case ^ast.Return_Stmt: tc_return_stmt(an, vars, s, func_id)
+        case ^ast.Print_Stmt: tc_print_stmt(an, vars, s)
+        case ^ast.While_Stmt: tc_while_stmt(an, vars, s, func_id)
+        case ^ast.If_Stmt: tc_if_stmt(an, vars, s, func_id)
+        case ^ast.Assignment_Stmt: tc_assignment_stmt(an, vars, s)
+        case ^ast.Index_Assignment_Stmt: tc_index_stmt(an, vars, s)
     }
 }
 
 @private
-tc_index_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^p.Index_Assignment_Stmt) {
-    var := p.get_array_type_internal(vars[stmt.id])
+tc_index_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Index_Assignment_Stmt) {
+    var := ast.get_array_type_internal(vars[stmt.id])
     etype := tc_expression(an, vars, stmt.expr)
     
     tc_expression(an, vars, stmt.index)
 
-    if etype != nil && !p.is_type_equal(etype, var) {
+    if etype != nil && !ast.is_type_equal(etype, var) {
         append(&an.errors, Error { "Type mismatch", stmt.id })
     }
 }
 
 @private
-tc_assignment_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^p.Assignment_Stmt) {
+tc_assignment_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Assignment_Stmt) {
     var := vars[stmt.id]
     etype := tc_expression(an, vars, stmt.expr)
     
-    if etype != nil && !p.is_type_equal(var, etype) {
+    if etype != nil && !ast.is_type_equal(var, etype) {
         append(&an.errors, Error { "Type mismatch", stmt.id })
     }
 }
 
 @private
-tc_if_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^p.If_Stmt, func_id: string) {
+tc_if_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.If_Stmt, func_id: string) {
     etype := tc_expression(an, vars, stmt.cond)
-    if etype != nil && !p.is_type_equal(etype, "Bool") {
+    if etype != nil && !ast.is_type_equal(etype, "Bool") {
         fmt.println(etype)
         append(&an.errors, Error { "Conditional expression does not return 'Bool'", "" })
     }
@@ -84,9 +84,9 @@ tc_if_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^p.If_Stmt, func_id: string
 }
 
 @private
-tc_while_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^p.While_Stmt, func_id: string) {
+tc_while_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.While_Stmt, func_id: string) {
     etype := tc_expression(an, vars, stmt.cond)
-    if etype != nil && !p.is_type_equal(etype, "Bool") {
+    if etype != nil && !ast.is_type_equal(etype, "Bool") {
         fmt.println(etype)
         append(&an.errors, Error { "Conditional expression does not return 'Bool'", "" })
     }
@@ -97,51 +97,51 @@ tc_while_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^p.While_Stmt, func_id: 
 }
 
 @private
-tc_print_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^p.Print_Stmt) {
+tc_print_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Print_Stmt) {
     tc_expression(an, vars, stmt.expr)
 }
 
 @private
-tc_return_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt:  ^p.Return_Stmt, func_id: string) {
+tc_return_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt:  ^ast.Return_Stmt, func_id: string) {
     func := an.functions[func_id]
     etype := tc_expression(an, vars, stmt.expr)
     
-    if etype != nil && !p.is_type_equal(func.return_type, etype) {
+    if etype != nil && !ast.is_type_equal(func.return_type, etype) {
         append(&an.errors, Error { "return statement does not match function return type", "" })
     }
 }
 
 @private
-tc_variable_decl_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^p.Variable_Decl_Stmt) {
+tc_variable_decl_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Variable_Decl_Stmt) {
     vars[stmt.id] = stmt.type
     
     etype := tc_expression(an, vars, stmt.expr)
     
-    if etype != nil && !p.is_type_equal(etype, stmt.type) {
+    if etype != nil && !ast.is_type_equal(etype, stmt.type) {
         append(&an.errors, Error { "Mismatched type", stmt.id })
     }
 }
 
 @private
-tc_expression :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Expression) -> p.Type {
+tc_expression :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Expression) -> ast.Type {
     switch e in expr {
-        case ^p.Primary_Expr: return tc_primary_expr(an, vars, e)
-        case ^p.Unary_Expr: return tc_unary_expr(an, vars, e)
-        case ^p.Binary_Expr: return tc_binary_expr(an, vars, e)
+        case ^ast.Primary_Expr: return tc_primary_expr(an, vars, e)
+        case ^ast.Unary_Expr: return tc_unary_expr(an, vars, e)
+        case ^ast.Binary_Expr: return tc_binary_expr(an, vars, e)
     }
 
     return "Unreachable code"
 }
 
 @private
-tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Binary_Expr) -> p.Type {
+tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> ast.Type {
     ltype := tc_expression(an, vars, expr.lhs)
     rtype := tc_expression(an, vars, expr.rhs)
     
     switch expr.op {
         case .Or, .And: {
-            b1 := p.is_type_equal(ltype, "Bool")
-            b2 := p.is_type_equal(rtype, "Bool")
+            b1 := ast.is_type_equal(ltype, "Bool")
+            b2 := ast.is_type_equal(rtype, "Bool")
             
             if !b1 || !b2 {
                 append(&an.errors, Error { "'or' and 'and' only work with 'Bool'", "" })
@@ -151,7 +151,7 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Binary_Expr) -> p.Ty
         }
         
         case .Eq, .Neq: {
-            if !p.is_type_equal(ltype, rtype) {
+            if !ast.is_type_equal(ltype, rtype) {
                 append(&an.errors, Error { "'==' and '!=' need the same type on both sides", "" })
             } else {
                 return "Bool"
@@ -159,11 +159,11 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Binary_Expr) -> p.Ty
         }
 
         case .Gt, .Lt, .Gt_Eq, .Lt_Eq: {
-            f1 := p.is_type_equal(ltype, "Float")
-            f2 := p.is_type_equal(rtype, "Float")
+            f1 := ast.is_type_equal(ltype, "Float")
+            f2 := ast.is_type_equal(rtype, "Float")
             
-            i1 := p.is_type_equal(ltype, "Int")
-            i2 := p.is_type_equal(rtype, "Int")
+            i1 := ast.is_type_equal(ltype, "Int")
+            i2 := ast.is_type_equal(rtype, "Int")
 
             n1 := f1 || i1
             n2 := f2 || i2
@@ -176,11 +176,11 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Binary_Expr) -> p.Ty
         }
         
         case .Sub, .Mul, .Div, .Mod: {
-            f1 := p.is_type_equal(ltype, "Float")
-            f2 := p.is_type_equal(rtype, "Float")
+            f1 := ast.is_type_equal(ltype, "Float")
+            f2 := ast.is_type_equal(rtype, "Float")
 
-            i1 := p.is_type_equal(ltype, "Int")
-            i2 := p.is_type_equal(rtype, "Int")
+            i1 := ast.is_type_equal(ltype, "Int")
+            i2 := ast.is_type_equal(rtype, "Int")
 
             n1 := f1 || i1
             n2 := f2 || i2
@@ -197,22 +197,22 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Binary_Expr) -> p.Ty
         }
 
         case .Add: {
-            f1 := p.is_type_equal(ltype, "Float")
-            f2 := p.is_type_equal(rtype, "Float")
+            f1 := ast.is_type_equal(ltype, "Float")
+            f2 := ast.is_type_equal(rtype, "Float")
 
-            i1 := p.is_type_equal(ltype, "Int")
-            i2 := p.is_type_equal(rtype, "Int")
+            i1 := ast.is_type_equal(ltype, "Int")
+            i2 := ast.is_type_equal(rtype, "Int")
             
             n1 := f1 || i1
             n2 := f2 || i2
 
             if !n1 || !n2 {
-                if p.is_type_equal(ltype, "String") && p.is_type_equal(rtype, "String") {
+                if ast.is_type_equal(ltype, "String") && ast.is_type_equal(rtype, "String") {
                     return "String"
                 } else {
-                    if !p.is_array_type(ltype) && !p.is_array_type(rtype) {
+                    if !ast.is_array_type(ltype) && !ast.is_array_type(rtype) {
                         append(&an.errors, Error { "'+' only works with 'String', 'Array', 'Int' and 'Float'", "" })
-                    } else if !p.is_type_equal(ltype, rtype) {
+                    } else if !ast.is_type_equal(ltype, rtype) {
                         append(&an.errors, Error { "Arrays are different types", "" })
                     } else {
                         return ltype
@@ -228,9 +228,9 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Binary_Expr) -> p.Ty
         }
         
         case .Index: {
-            if p.is_type_equal(ltype, "String") || p.is_array_type(ltype) {
-                if p.is_type_equal(rtype, "Int") {
-                    return p.get_array_type_internal(ltype)
+            if ast.is_type_equal(ltype, "String") || ast.is_array_type(ltype) {
+                if ast.is_type_equal(rtype, "Int") {
+                    return ast.get_array_type_internal(ltype)
                 } else {
                     append(&an.errors, Error { "You can only use 'Int' to index a collection", "" })
                 }
@@ -244,16 +244,16 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Binary_Expr) -> p.Ty
 }
 
 @private
-tc_unary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Unary_Expr) -> p.Type {
+tc_unary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Unary_Expr) -> ast.Type {
     etype := tc_expression(an, vars, expr.expr)
     
     if expr.op == .Negation {
-        if !p.is_type_equal(etype, "Int") && !p.is_type_equal(etype, "Float") {
+        if !ast.is_type_equal(etype, "Int") && !ast.is_type_equal(etype, "Float") {
             append(&an.errors, Error { "'-' only works with 'Int' or 'Float'", "" })
             return nil
         }
     } else {
-        if !p.is_type_equal(etype, "Bool") {
+        if !ast.is_type_equal(etype, "Bool") {
             append(&an.errors, Error { "'not' only works with 'Bool'", "" })
             return nil
         }
@@ -263,9 +263,9 @@ tc_unary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Unary_Expr) -> p.Type
 }
 
 @private
-tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Primary_Expr) -> p.Type {
+tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Primary_Expr) -> ast.Type {
     #partial switch v in expr {
-        case p.Number: {
+        case ast.Number: {
             switch n in v {
                 case i64: return "Int"
                 case f64: return "Float"
@@ -275,7 +275,7 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Primary_Expr) -> p.
         case string: return "String"
         case bool: return "Bool"
         
-        case p.Identifier: {
+        case ast.Identifier: {
             if string(v) in vars {
                 var := vars[string(v)]
                 return var
@@ -284,10 +284,10 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Primary_Expr) -> p.
             }
         }
         
-        case ^p.Array_Literal: {
+        case ^ast.Array_Literal: {
             missmatch := false
             first_loop := true
-            last_type: p.Type = nil
+            last_type: ast.Type = nil
 
             for e in v {
                 lit_type := tc_expression(an, vars, e)
@@ -295,7 +295,7 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Primary_Expr) -> p.
                     first_loop = false
                     last_type = lit_type
                 } else if !missmatch && lit_type != nil {
-                    if !p.is_type_equal(last_type, lit_type) {
+                    if !ast.is_type_equal(last_type, lit_type) {
                         missmatch = true
                     }
                 }
@@ -306,15 +306,15 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Primary_Expr) -> p.
                 return nil
             }
 
-            array_type := new(p.Type, context.temp_allocator)
+            array_type := new(ast.Type, context.temp_allocator)
             array_type^ = last_type
 
             return array_type
         }
         
-        case ^p.Expression: return tc_expression(an, vars, v)
+        case ^ast.Expression: return tc_expression(an, vars, v)
 
-        case ^p.Function_Call: {
+        case ^ast.Function_Call: {
             if v.id in an.functions {
                 func := an.functions[v.id]
 
@@ -323,7 +323,7 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^p.Primary_Expr) -> p.
                 } else {
                     for i in 0 ..< len(v.params) {
                         etype := tc_expression(an, vars, v.params[i])
-                        if !p.is_type_equal(etype, func.params[i].type) {
+                        if !ast.is_type_equal(etype, func.params[i].type) {
                             append(&an.errors, Error { "Invalid type for function call", func.id })
                         } 
                     }

@@ -1,6 +1,7 @@
 package analyser
 
-import p "../parser"
+import ast "../ast"
+
 
 Error_List :: [dynamic]Error
 
@@ -12,13 +13,13 @@ Error :: struct {
 @private
 Analyser :: struct {
     errors: Error_List,
-    functions: map[string]^p.Function_Decl,
-    ast: ^p.Ast,
+    functions: map[string]^ast.Function_Decl,
+    tree: ^ast.Ast,
 }
 
-analyse :: proc(ast: ^p.Ast) -> Error_List {
+analyse :: proc(tree: ^ast.Ast) -> Error_List {
     an := Analyser {}
-    an.ast = ast
+    an.tree = tree
 
     defer delete(an.functions)
 
@@ -31,7 +32,7 @@ analyse :: proc(ast: ^p.Ast) -> Error_List {
 
 @private
 duplicate_function_check :: proc(an: ^Analyser) {
-    for f in an.ast.functions {
+    for f in an.tree.functions {
         if f.id in an.functions {
             append(&an.errors, Error { "Duplicate function", f.id })
         } else {
@@ -42,7 +43,7 @@ duplicate_function_check :: proc(an: ^Analyser) {
 
 @private
 duplicate_variable_check :: proc(an: ^Analyser) {
-    for f in an.ast.functions {
+    for f in an.tree.functions {
         var_table := make(map[string]bool)
         defer delete(var_table)
 
@@ -56,7 +57,7 @@ duplicate_variable_check :: proc(an: ^Analyser) {
 
         for s, i in f.block.stmts {
             #partial switch v in s {
-                case ^p.Variable_Decl_Stmt: {
+                case ^ast.Variable_Decl_Stmt: {
                     if v.id in var_table {
                         f.block.stmts[i] = nil
                         append(&an.errors, Error { "Duplicate variable", v.id })
@@ -65,7 +66,7 @@ duplicate_variable_check :: proc(an: ^Analyser) {
                     }
                 }
 
-                case ^p.Assignment_Stmt: {
+                case ^ast.Assignment_Stmt: {
                     if !(v.id in var_table) {
                         f.block.stmts[i] = nil
                         append(&an.errors, Error { "Variable not found", v.id })

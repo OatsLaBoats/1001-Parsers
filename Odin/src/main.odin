@@ -8,12 +8,17 @@ import "core:mem"
 import "lexer"
 import "parser"
 import "analyser"
+import "ast"
 
 // TODO: Make a repl
 // TODO: Make commandline options: select file, on/off token printer, on/off ast printer, on/off only compiling
 // TODO: Redo the error system for the whole project
+// TODO: Add structs using data keyword
 
 main :: proc() {
+    print_tokens := false
+    print_ast := true
+
     contents, success := os.read_entire_file_from_filename("../test.sigma")
     defer delete(contents)
 
@@ -35,31 +40,32 @@ main :: proc() {
         os.exit(-1)
     }
     
-    lexer.print_tokens(lex)
+    if print_tokens {
+        lexer.print_tokens(lex)
+        fmt.println()
+    }
 
-    fmt.println()
-    
-    arena: virtual.Arena
-    err := virtual.arena_init_growing(&arena)
-    defer virtual.arena_destroy(&arena)
-    if err == .Out_Of_Memory {
-        fmt.println("Failed to create arena")
+    tree: ast.Ast
+    err := ast.init(&tree)
+    defer ast.destroy(&tree)
+    if err {
+        fmt.println("Failed to initialize AST")
         os.exit(-1)
     }
 
-    old_ctx := context
-    context.allocator = virtual.arena_allocator(&arena)
-    ast := parser.parse(lex.tokens[:])
-    context = old_ctx
+    parser.parse(&tree, lex.tokens[:])
 
-    //parser.print_ast(&ast)
+    if print_ast {
+        ast.print(&tree)
+        fmt.println()
+    }
 
-    fmt.println("\nMemory used(bytes): ", arena.total_used, "/", arena.total_reserved, sep="")
-    fmt.println("Memory used(megabytes): ", cast(f64)arena.total_used / mem.Megabyte, "/", cast(f64)arena.total_reserved / mem.Megabyte, sep="")
+    fmt.println("Memory used(bytes): ", tree._arena_p.total_used, "/", tree._arena_p.total_reserved, sep="")
+    fmt.println("Memory used(megabytes): ", cast(f64)tree._arena_p.total_used / mem.Megabyte, "/", cast(f64)tree._arena_p.total_reserved / mem.Megabyte, sep="")
     
-    errs := analyser.analyse(&ast)
-    
-    for e in errs {
+    analyser_errors := analyser.analyse(&tree)
+
+    for e in analyser_errors {
         fmt.println(e)
     }
 }

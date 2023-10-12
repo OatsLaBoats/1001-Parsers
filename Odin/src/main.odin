@@ -20,9 +20,9 @@ main :: proc() {
     print_ast := false
     optimise := false
     only_compile := false
-    filename: string = nil
+    filename: string = ""
 
-    for arg in os.args {
+    for arg in os.args[1:] {
         switch arg {
             case "--print-ast": print_ast = true
             case "--print-tokens": print_tokens = true
@@ -34,9 +34,9 @@ main :: proc() {
             case "--only-compile": only_compile = true
             case: {
                 if strings.has_suffix(arg, ".sigma") {
-                    if filename == nil do filename = arg
+                    if filename == "" do filename = arg
                 } else {
-                    fmt.println("Error: Script is not a '.sigma' file")
+                    fmt.println("Error: Unknown option \"", arg, "\"", sep="")
                     os.exit(-1)
                 }
             }
@@ -45,11 +45,13 @@ main :: proc() {
     
     // TODO: Activate this
     /*
-    if filename == nil {
+    if filename == "" {
         fmt.println("Error: No script provided")
         os.exist(-1)
     }
     */
+    
+    fmt.println(filename)
 
     contents, success := os.read_entire_file_from_filename("../test.sigma")
     defer delete(contents)

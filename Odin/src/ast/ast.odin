@@ -4,8 +4,6 @@ import vrt "core:mem/virtual"
 import "core:mem"
 import "core:fmt"
 
-// TODO: Rethink the Type union its really messy to use right now, maybe it would be better to just have a struct with some info instead.
-
 Ast :: struct {
     functions: [dynamic]^Function_Decl,
 
@@ -25,7 +23,7 @@ Function_Decl :: struct {
 
 Function_Parameter :: struct {
     id: string,
-    type: Type,
+    type: Type, // TODO: Rename to ptype
 }
 
 Block :: struct {

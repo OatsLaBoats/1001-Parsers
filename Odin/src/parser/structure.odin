@@ -29,18 +29,23 @@ parse_function_decl :: proc(parser: ^Parser) -> ^ast.Function_Decl {
 @private
 parse_type_annotation :: proc(parser: ^Parser) -> ast.Type {
     if match(parser, .L_Bracket) {
-        advance(parser)
-
-        arr_type := new(ast.Type)
-        t := parse_type_annotation(parser)
-        arr_type^ = t
+        result := ast.Array_Type {}
         
-        expect(parser, .R_Bracket, "Expected closing ']' for array type annotation")
+        for match(parser, .L_Bracket) {
+            advance(parser)
+            result.nesting += 1
+        }
+        
+        result.internal.id = expect(parser, .Identifier, "Expected type identifier inside array type annotation").lexeme
+        
+        for i in 0..< result.nesting {
+            expect(parser, .R_Bracket, "Expected closing ']' for array type annotation")
+        }
 
-        return arr_type
+        return result
     }
     else {
-        return expect(parser, .Identifier, "Expected type annotation").lexeme
+        return ast.Base_Type { expect(parser, .Identifier, "Expected type annotation").lexeme }
     }
 }
 

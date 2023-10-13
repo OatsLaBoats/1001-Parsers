@@ -1,6 +1,8 @@
 package analyser
 
 // TODO: Clean this up cause holy shit its a mess
+// TODO: Functions with no return type should not return anything
+// TODO: Scan for missing return
 
 import "core:fmt"
 
@@ -65,8 +67,7 @@ tc_assignment_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Assignment_Stm
 @private
 tc_if_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.If_Stmt, func_id: string) {
     etype := tc_expression(an, vars, stmt.cond)
-    if etype != nil && !ast.is_type_equal(etype, "Bool") {
-        fmt.println(etype)
+    if etype != nil && !ast.is_type_equal(etype, ast.BOOL_TYPE) {
         append(&an.errors, Error { "Conditional expression does not return 'Bool'", "" })
     }
 
@@ -86,7 +87,7 @@ tc_if_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.If_Stmt, func_id: stri
 @private
 tc_while_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.While_Stmt, func_id: string) {
     etype := tc_expression(an, vars, stmt.cond)
-    if etype != nil && !ast.is_type_equal(etype, "Bool") {
+    if etype != nil && !ast.is_type_equal(etype, ast.BOOL_TYPE) {
         fmt.println(etype)
         append(&an.errors, Error { "Conditional expression does not return 'Bool'", "" })
     }
@@ -129,8 +130,8 @@ tc_expression :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Expression) -> ast.
         case ^ast.Unary_Expr: return tc_unary_expr(an, vars, e)
         case ^ast.Binary_Expr: return tc_binary_expr(an, vars, e)
     }
-
-    return "Unreachable code"
+    
+    return nil
 }
 
 @private
@@ -138,15 +139,17 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
     ltype := tc_expression(an, vars, expr.lhs)
     rtype := tc_expression(an, vars, expr.rhs)
     
+    if ltype == nil || rtype == nil do return nil
+    
     switch expr.op {
         case .Or, .And: {
-            b1 := ast.is_type_equal(ltype, "Bool")
-            b2 := ast.is_type_equal(rtype, "Bool")
+            b1 := ast.is_type_equal(ltype, ast.BOOL_TYPE)
+            b2 := ast.is_type_equal(rtype, ast.BOOL_TYPE)
             
             if !b1 || !b2 {
                 append(&an.errors, Error { "'or' and 'and' only work with 'Bool'", "" })
             } else {
-                return "Bool"
+                return ast.BOOL_TYPE
             }
         }
         
@@ -154,16 +157,16 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
             if !ast.is_type_equal(ltype, rtype) {
                 append(&an.errors, Error { "'==' and '!=' need the same type on both sides", "" })
             } else {
-                return "Bool"
+                return ast.BOOL_TYPE
             }
         }
 
         case .Gt, .Lt, .Gt_Eq, .Lt_Eq: {
-            f1 := ast.is_type_equal(ltype, "Float")
-            f2 := ast.is_type_equal(rtype, "Float")
+            f1 := ast.is_type_equal(ltype, ast.FLOAT_TYPE)
+            f2 := ast.is_type_equal(rtype, ast.FLOAT_TYPE)
             
-            i1 := ast.is_type_equal(ltype, "Int")
-            i2 := ast.is_type_equal(rtype, "Int")
+            i1 := ast.is_type_equal(ltype, ast.INT_TYPE)
+            i2 := ast.is_type_equal(rtype, ast.INT_TYPE)
 
             n1 := f1 || i1
             n2 := f2 || i2
@@ -171,16 +174,16 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
             if !n1 || !n2 {
                 append(&an.errors, Error { "'>', '<', '>=', '<=', '-', '*', '/' and '%' only work on 'Float' and 'Int'", "" })
             } else {
-                return "Bool"
+                return ast.BOOL_TYPE
             }
         }
         
         case .Sub, .Mul, .Div, .Mod: {
-            f1 := ast.is_type_equal(ltype, "Float")
-            f2 := ast.is_type_equal(rtype, "Float")
-
-            i1 := ast.is_type_equal(ltype, "Int")
-            i2 := ast.is_type_equal(rtype, "Int")
+            f1 := ast.is_type_equal(ltype, ast.FLOAT_TYPE)
+            f2 := ast.is_type_equal(rtype, ast.FLOAT_TYPE)
+            
+            i1 := ast.is_type_equal(ltype, ast.INT_TYPE)
+            i2 := ast.is_type_equal(rtype, ast.INT_TYPE)
 
             n1 := f1 || i1
             n2 := f2 || i2
@@ -189,26 +192,26 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
                 append(&an.errors, Error { "'>', '<', '>=', '<=', '-', '*', '/' and '%' only work on 'Float' and 'Int'", "" })
             } else {
                 if f1 || f2 {
-                    return "Float"
+                    return ast.FLOAT_TYPE
                 } else {
-                    return "Int"
+                    return ast.INT_TYPE
                 }
             }
         }
 
         case .Add: {
-            f1 := ast.is_type_equal(ltype, "Float")
-            f2 := ast.is_type_equal(rtype, "Float")
-
-            i1 := ast.is_type_equal(ltype, "Int")
-            i2 := ast.is_type_equal(rtype, "Int")
+            f1 := ast.is_type_equal(ltype, ast.FLOAT_TYPE)
+            f2 := ast.is_type_equal(rtype, ast.FLOAT_TYPE)
+            
+            i1 := ast.is_type_equal(ltype, ast.INT_TYPE)
+            i2 := ast.is_type_equal(rtype, ast.INT_TYPE)
             
             n1 := f1 || i1
             n2 := f2 || i2
 
             if !n1 || !n2 {
-                if ast.is_type_equal(ltype, "String") && ast.is_type_equal(rtype, "String") {
-                    return "String"
+                if ast.is_type_equal(ltype, ast.STRING_TYPE) && ast.is_type_equal(rtype, ast.STRING_TYPE) {
+                    return ast.STRING_TYPE
                 } else {
                     if !ast.is_array_type(ltype) && !ast.is_array_type(rtype) {
                         append(&an.errors, Error { "'+' only works with 'String', 'Array', 'Int' and 'Float'", "" })
@@ -220,16 +223,16 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
                 }
             } else {
                 if f1 || f2 {
-                    return "Float"
+                    return ast.FLOAT_TYPE
                 } else {
-                    return "Int"
+                    return ast.INT_TYPE
                 }
             }
         }
         
         case .Index: {
-            if ast.is_type_equal(ltype, "String") || ast.is_array_type(ltype) {
-                if ast.is_type_equal(rtype, "Int") {
+            if ast.is_type_equal(ltype, ast.STRING_TYPE) || ast.is_array_type(ltype) {
+                if ast.is_type_equal(rtype, ast.INT_TYPE) {
                     return ast.get_array_type_internal(ltype)
                 } else {
                     append(&an.errors, Error { "You can only use 'Int' to index a collection", "" })
@@ -246,14 +249,15 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
 @private
 tc_unary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Unary_Expr) -> ast.Type {
     etype := tc_expression(an, vars, expr.expr)
+    if etype == nil do return nil
     
     if expr.op == .Negation {
-        if !ast.is_type_equal(etype, "Int") && !ast.is_type_equal(etype, "Float") {
+        if !ast.is_type_equal(etype, ast.INT_TYPE) && !ast.is_type_equal(etype, ast.FLOAT_TYPE) {
             append(&an.errors, Error { "'-' only works with 'Int' or 'Float'", "" })
             return nil
         }
     } else {
-        if !ast.is_type_equal(etype, "Bool") {
+        if !ast.is_type_equal(etype, ast.BOOL_TYPE) {
             append(&an.errors, Error { "'not' only works with 'Bool'", "" })
             return nil
         }
@@ -264,16 +268,16 @@ tc_unary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Unary_Expr) -> ast.
 
 @private
 tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Primary_Expr) -> ast.Type {
-    #partial switch v in expr {
+    switch v in expr {
         case ast.Number: {
             switch n in v {
-                case i64: return "Int"
-                case f64: return "Float"
+                case i64: return ast.INT_TYPE
+                case f64: return ast.FLOAT_TYPE
             }
         }
         
-        case string: return "String"
-        case bool: return "Bool"
+        case string: return ast.STRING_TYPE
+        case bool: return ast.BOOL_TYPE
         
         case ast.Identifier: {
             if string(v) in vars {
@@ -285,31 +289,35 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Primary_Expr) -> 
         }
         
         case ^ast.Array_Literal: {
-            missmatch := false
-            first_loop := true
-            last_type: ast.Type = nil
+            first_type: ast.Type = nil
+
+            result := ast.Array_Type {}
+            result.nesting = 1
 
             for e in v {
                 lit_type := tc_expression(an, vars, e)
-                if first_loop {
-                    first_loop = false
-                    last_type = lit_type
-                } else if !missmatch && lit_type != nil {
-                    if !ast.is_type_equal(last_type, lit_type) {
-                        missmatch = true
+
+                if lit_type == nil do return nil
+                
+                if first_type == nil {
+                    first_type = lit_type
+
+                    switch v in lit_type {
+                        case ast.Base_Type: result.internal = v
+                        case ast.Array_Type: {
+                            result.nesting += v.nesting
+                            result.internal = v.internal
+                        }
                     }
+                }
+                
+                if !ast.is_type_equal(first_type, lit_type) {
+                    append(&an.errors, Error { "Multiple types in array literal", "" })
+                    return nil
                 }
             }
             
-            if missmatch {
-                append(&an.errors, Error { "Multiple types in array literal", "" })
-                return nil
-            }
-
-            array_type := new(ast.Type, context.temp_allocator)
-            array_type^ = last_type
-
-            return array_type
+            return result
         }
         
         case ^ast.Expression: return tc_expression(an, vars, v)

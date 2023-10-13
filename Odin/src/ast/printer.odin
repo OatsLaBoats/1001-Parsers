@@ -11,13 +11,17 @@ print :: proc(ast: ^Ast) {
 @private
 print_type :: proc(t: Type) {
     switch v in t {
-        case Scalar_Type: fmt.print(v)
+        case Base_Type: fmt.print(v.id)
         case Array_Type: {
-            fmt.print("[")
+            for i in 0..<v.nesting {
+                fmt.print("[")
+            }
             
-            print_type(v^)
+            fmt.println(v.internal.id)
 
-            fmt.print("]")
+            for i in 0..<v.nesting {
+                fmt.print("]")
+            }
         }
     }
 }

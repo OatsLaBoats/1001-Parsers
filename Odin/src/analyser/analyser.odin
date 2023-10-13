@@ -72,6 +72,13 @@ duplicate_variable_check :: proc(an: ^Analyser) {
                         append(&an.errors, Error { "Variable not found", v.id })
                     }
                 }
+                
+                case ^ast.Index_Assignment_Stmt: {
+                    if !(v.id in var_table) {
+                        f.block.stmts[i] = nil
+                        append(&an.errors, Error { "Variable not found", v.id })
+                    }
+                }
             }
         }
     }

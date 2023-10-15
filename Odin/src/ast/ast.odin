@@ -4,6 +4,9 @@ import vrt "core:mem/virtual"
 import "core:mem"
 import "core:fmt"
 
+// TODO: Create copy functions for easier re-construction of the ast
+// TODO: Rename type member
+
 Ast :: struct {
     functions: [dynamic]^Function_Decl,
 
@@ -23,7 +26,7 @@ Function_Decl :: struct {
 
 Function_Parameter :: struct {
     id: string,
-    type: Type, // TODO: Rename to ptype
+    type: Type,
 }
 
 Block :: struct {
@@ -128,6 +131,7 @@ Unary_Expr :: struct {
     expr: ^Expression,
 }
 
+// TODO: Clean this up with better names. I'm not a huge fan of using aliases for unions. Will use wrapper structs instead in the future.
 Primary_Expr :: union {
     Number,
     string,
@@ -172,10 +176,11 @@ get_arena :: proc(ast: ^Ast) -> mem.Allocator {
     return vrt.arena_allocator(ast._arena_p)
 }
 
-init :: proc(ast: ^Ast) -> bool {
-    ast._arena1 = new(vrt.Arena)
-    ast._arena2 = new(vrt.Arena)
+init :: proc(ast: ^Ast, allocator := context.allocator) -> bool {
+    ast._arena1 = new(vrt.Arena, allocator)
+    ast._arena2 = new(vrt.Arena, allocator)
 
+    // Arenas use the page allocator of the os so we can't pass in the context
     e1 := vrt.arena_init_growing(ast._arena1)
     e2 := vrt.arena_init_growing(ast._arena2)
     

@@ -17,7 +17,7 @@ print_type :: proc(t: Type) {
                 fmt.print("[")
             }
             
-            fmt.println(v.internal.id)
+            fmt.print(v.internal.id)
 
             for i in 0..<v.nesting {
                 fmt.print("]")

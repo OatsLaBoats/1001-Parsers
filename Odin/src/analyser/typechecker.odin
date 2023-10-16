@@ -269,32 +269,27 @@ tc_unary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Unary_Expr) -> ast.
 @private
 tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Primary_Expr) -> ast.Type {
     switch v in expr {
-        case ast.Number: {
-            switch n in v {
-                case i64: return ast.INT_TYPE
-                case f64: return ast.FLOAT_TYPE
-            }
-        }
-        
-        case string: return ast.STRING_TYPE
-        case bool: return ast.BOOL_TYPE
+        case ast.Int_Lit: return ast.INT_TYPE
+        case ast.Float_Lit: return ast.FLOAT_TYPE
+        case ast.String_Lit: return ast.STRING_TYPE
+        case ast.Bool_Lit: return ast.BOOL_TYPE
         
         case ast.Identifier: {
-            if string(v) in vars {
-                var := vars[string(v)]
+            if v.value in vars {
+                var := vars[v.value]
                 return var
             } else {
-                append(&an.errors, Error { "Variable does not exist", string(v) })
+                append(&an.errors, Error { "Variable does not exist", v.value })
             }
         }
         
-        case ^ast.Array_Literal: {
+        case ^ast.Array_Lit: {
             first_type: ast.Type = nil
 
             result := ast.Array_Type {}
             result.nesting = 1
 
-            for e in v {
+            for e in v.values {
                 lit_type := tc_expression(an, vars, e)
 
                 if lit_type == nil do return nil
@@ -302,11 +297,11 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Primary_Expr) -> 
                 if first_type == nil {
                     first_type = lit_type
 
-                    switch v in lit_type {
-                        case ast.Base_Type: result.internal = v
+                    switch t in lit_type {
+                        case ast.Base_Type: result.internal = t
                         case ast.Array_Type: {
-                            result.nesting += v.nesting
-                            result.internal = v.internal
+                            result.nesting += t.nesting
+                            result.internal = t.internal
                         }
                     }
                 }

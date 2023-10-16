@@ -245,26 +245,26 @@ parse_primary_expr :: proc(parser: ^Parser) -> ^ast.Expression {
         l := advance(parser).lexeme
         if strings.contains(l, ".") {
             value, ok := strconv.parse_f64(l)
-            pexpr^ = ast.Number(value)
+            pexpr^ = ast.Float_Lit { value }
             expr^ = pexpr
             return expr
         }
 
         value, ok := strconv.parse_i64_of_base(l, 10)
-        pexpr^ = ast.Number(value)
+        pexpr^ = ast.Int_Lit { value }
         expr^ = pexpr
         return expr
     }
     
     if match(parser, .String_Lit) {
-        pexpr^ = advance(parser).lexeme
+        pexpr^ = ast.String_Lit { advance(parser).lexeme }
         expr^ = pexpr
         return expr
     }
     
     if match(parser, .Bool_Lit) {
         value, ok := strconv.parse_bool(advance(parser).lexeme)
-        pexpr^ = value
+        pexpr^ = ast.Bool_Lit { value }
         expr^ = pexpr
         return expr
     }
@@ -294,7 +294,7 @@ parse_primary_expr :: proc(parser: ^Parser) -> ^ast.Expression {
                 }
             }
         } else {
-            pexpr^ = ast.Identifier(id)
+            pexpr^ = ast.Identifier { id }
             expr^ = pexpr
             return expr
         }
@@ -304,7 +304,7 @@ parse_primary_expr :: proc(parser: ^Parser) -> ^ast.Expression {
     if match(parser, .L_Bracket) {
         advance(parser)
         
-        al := new(ast.Array_Literal)
+        al := new(ast.Array_Lit)
         
         for {
             if match(parser, .R_Bracket) {
@@ -314,8 +314,7 @@ parse_primary_expr :: proc(parser: ^Parser) -> ^ast.Expression {
                 return expr
             }
             
-            lit_expr := parse_expression(parser)
-            append(al, lit_expr)
+            append(&al.values, parse_expression(parser))
             
             if !match(parser, .R_Bracket) do expect(parser, .Comma, "Expected ',' after expression")
         }

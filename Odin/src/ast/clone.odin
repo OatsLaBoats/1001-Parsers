@@ -183,17 +183,18 @@ clone_primary_expr :: proc(e: ^Primary_Expr, allocator := context.allocator) -> 
     r := new(Primary_Expr)
 
     switch v in e {
-        case Number: r^ = v
-        case string: r^ = v
-        case bool: r^ = v
+        case Int_Lit: r^ = v
+        case Float_Lit: r^ = v
+        case String_Lit: r^ = v
+        case Bool_Lit: r^ = v
         case Identifier: r^ = v
         case ^Expression: r^ = clone_expression(v)
 
-        case ^Array_Literal: {
-            lits := new(Array_Literal)
+        case ^Array_Lit: {
+            lits := new(Array_Lit)
 
-            for lit in v {
-                append(lits, clone_expression(lit))
+            for lit in v.values {
+                append(&lits.values, clone_expression(lit))
             }
             
             r^ = lits

@@ -128,29 +128,44 @@ Unary_Expr :: struct {
     expr: ^Expression,
 }
 
-// TODO: Clean this up with better names. I'm not a huge fan of using aliases for unions. Will use wrapper structs instead in the future.
 Primary_Expr :: union {
-    Number,
-    string,
-    bool,
+    Int_Lit,
+    Float_Lit,
+    String_Lit,
+    Bool_Lit,
     Identifier,
-    ^Array_Literal,
+    ^Array_Lit,
     ^Expression,
     ^Function_Call,
+}
+
+Int_Lit :: struct {
+    value: i64
+}
+
+Float_Lit :: struct {
+    value: f64
+}
+
+String_Lit :: struct {
+    value: string
+}
+
+Bool_Lit :: struct {
+    value: bool
+}
+
+Array_Lit :: struct {
+    values: [dynamic]^Expression
+}
+
+Identifier :: struct {
+    value: string
 }
 
 Function_Call :: struct {
     id: string,
     params: [dynamic]^Expression,
-}
-
-Array_Literal :: distinct [dynamic]^Expression
-
-Identifier :: distinct string
-
-Number :: union {
-    f64,
-    i64,
 }
 
 swap_arena :: proc(ast: ^Ast) -> mem.Allocator {

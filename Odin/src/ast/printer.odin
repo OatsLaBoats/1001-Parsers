@@ -236,53 +236,55 @@ print_primary_expr :: proc(expr: ^Primary_Expr, indent: int) {
     print_indent(indent)
     fmt.println("<Primary_Expr>")
 
-    switch v1 in expr {
-        case Number: {
+    switch v in expr {
+        case Int_Lit: {
             print_indent(indent + 1)
-            switch v2 in v1  {
-                case f64: fmt.println("literal(f64):", v2)
-                case i64: fmt.println("literal(i64):", v2)
-            }           
+            fmt.println("literal(Int):", v.value)
         }
 
-        case string:  {
+        case Float_Lit: {
             print_indent(indent + 1)
-            fmt.println("literal(string): \"", v1, "\"", sep = "") 
+            fmt.println("literal(Float):", v.value)
         }
 
-        case bool: {
+        case String_Lit:  {
             print_indent(indent + 1)
-            fmt.println("literal(bool):", v1) 
+            fmt.println("literal(String): \"", v.value, "\"", sep = "") 
+        }
+
+        case Bool_Lit: {
+            print_indent(indent + 1)
+            fmt.println("literal(Bool):", v.value) 
         }
 
         case Identifier: {
             print_indent(indent + 1)
-            fmt.println("identifier:", v1)
+            fmt.println("identifier(access):", v.value)
         }
 
         case ^Function_Call: {
             print_indent(indent + 1)
-            fmt.println("identifier(function):", v1.id)
+            fmt.println("identifier(call):", v.id)
 
             print_indent(indent + 1)
             fmt.println("parameters:")
             
-            for param in v1.params {
+            for param in v.params {
                 print_expr(param, indent + 2)
             }
         }
         
-        case ^Array_Literal: {
+        case ^Array_Lit: {
             print_indent(indent + 1)
-            fmt.println("literal(array):")
+            fmt.println("literal(Array):")
 
-            for e in v1 {
+            for e in v.values {
                 print_expr(e, indent + 2)
             }
         }
 
         case ^Expression: {
-            print_expr(v1, indent + 1)
+            print_expr(v, indent + 1)
         }
     }
 }

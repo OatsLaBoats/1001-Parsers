@@ -15,7 +15,6 @@ import "ast"
 // TODO: Redo the error system for the whole project
 // TODO: Add structs using data keyword
 // TODO: Cleanup the ast to remove nil statements
-// TODO: Add allocator param to functions that allocate
 
 main :: proc() {
     print_tokens := false

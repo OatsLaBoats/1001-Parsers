@@ -1,10 +1,9 @@
 package analyser
 
 // TODO: Clean this up cause holy shit its a mess
-// TODO: Functions with no return type should not return anything
-// TODO: Scan for missing return
 
 import "core:fmt"
+import "core:slice"
 
 import "../ast"
 
@@ -22,6 +21,21 @@ typecheck :: proc(an: ^Analyser) {
 
         for s in f.block.stmts {
             if s != nil do tc_statement(an, &vars, s, f.id)
+        }
+        
+        if f.return_type != nil {
+            return_found := false
+            
+            if len(f.block.stmts) > 0 {
+                last := f.block.stmts[len(f.block.stmts) - 1]
+                #partial switch v in last {
+                    case ^ast.Return_Stmt: return_found = true
+                }               
+            }
+            
+            if !return_found {
+                append(&an.errors, Error { "missing return statement", f.id })
+            }
         }
     
         // We may need to allocate space for an array type in that case we should free the temporary allocator
@@ -106,9 +120,11 @@ tc_print_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Print_Stmt) {
 tc_return_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt:  ^ast.Return_Stmt, func_id: string) {
     func := an.functions[func_id]
     etype := tc_expression(an, vars, stmt.expr)
-    
-    if etype != nil && !ast.is_type_equal(func.return_type, etype) {
-        append(&an.errors, Error { "return statement does not match function return type", "" })
+
+    if func.return_type == nil {
+        append(&an.errors, Error { "function shouldn't have a return statement", func.id })
+    } else if etype != nil && !ast.is_type_equal(func.return_type, etype) {
+        append(&an.errors, Error { "return statement does not match function return type", func.id })
     }
 }
 

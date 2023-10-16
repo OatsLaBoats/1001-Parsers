@@ -18,7 +18,7 @@ import "ast"
 
 main :: proc() {
     print_tokens := false
-    print_ast := false
+    print_ast := true
     optimise := false
     only_compile := false
     filename: string = "../test.sigma"

@@ -4,6 +4,10 @@ fun add(a: Int, b: Int): Int {
     return a + b
 }
 
+fun doSomething() {
+    print "hello"
+}
+
 fun main(): Int {
     # Basic types and variables
     var anInt: Int = 10

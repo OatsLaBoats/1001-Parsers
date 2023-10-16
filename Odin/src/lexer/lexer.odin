@@ -39,7 +39,7 @@ Token :: struct {
     column: int,
 }
 
-Lexer :: struct {
+LexerResult :: struct {
     tokens: [dynamic]Token,
     errors: [dynamic]Error,
 }
@@ -55,20 +55,23 @@ Result :: union #no_nil {
     Error,
 }
 
-print_tokens :: proc(lex: Lexer) {
+print_tokens :: proc(lex: LexerResult) {
     for t in lex.tokens {
         fmt.println(t)
     }
 }
 
-delete_lexer :: proc(lex: Lexer) {
+delete_lexer :: proc(lex: LexerResult, allocator := context.allocator) {
+    context.allocator = allocator
     delete(lex.tokens)
     delete(lex.errors)
 }
 
-scan :: proc(source: string) -> Lexer {
+scan :: proc(source: string, allocator := context.allocator) -> LexerResult {
+    context.allocator = allocator
+
     scanner := make_scanner(source)
-    lex := Lexer {}
+    lex := LexerResult {}
 
     for !is_at_end(&scanner) {
         res := scan_token(&scanner)

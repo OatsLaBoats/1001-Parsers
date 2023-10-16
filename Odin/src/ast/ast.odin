@@ -4,8 +4,6 @@ import vrt "core:mem/virtual"
 import "core:mem"
 import "core:fmt"
 
-// TODO: Create copy functions for easier re-construction of the ast
-
 Ast :: struct {
     functions: [dynamic]^Function_Decl,
 

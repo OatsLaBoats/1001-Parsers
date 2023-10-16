@@ -73,11 +73,11 @@ parse_function_paramters :: proc(parser: ^Parser) -> [dynamic]^ast.Function_Para
 parse_parameter :: proc(parser: ^Parser) -> ^ast.Function_Parameter {
     id := expect(parser, .Identifier, "Expected parameter name after '('.").lexeme
     expect(parser, .Colon, "Expected ':' after parameter name.")
-    type := parse_type_annotation(parser)
+    param_type := parse_type_annotation(parser)
 
     result := new(ast.Function_Parameter)
     result.id = id
-    result.type = type
+    result.param_type = param_type
 
     return result
 }

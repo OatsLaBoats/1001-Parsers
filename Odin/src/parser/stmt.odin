@@ -126,14 +126,14 @@ parse_var_decl_stmt :: proc(parser: ^Parser) -> ^ast.Variable_Decl_Stmt {
 
     id := expect(parser, .Identifier, "Expected variable name.").lexeme
     expect(parser, .Colon, "Expected ':' after variable name.")
-    type := parse_type_annotation(parser)
+    var_type := parse_type_annotation(parser)
     expect(parser, .Equal, "Expected '=' after type annotation.")
 
     expr := parse_expression(parser)
     
     result := new(ast.Variable_Decl_Stmt)
     result.id = id
-    result.type = type
+    result.var_type = var_type
     result.expr = expr
 
     return result

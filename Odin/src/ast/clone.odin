@@ -30,7 +30,7 @@ clone_function_decl :: proc(f: ^Function_Decl, allocator := context.allocator) -
     for p1 in f.params {
         p2 := new(Function_Parameter)
         p2.id = p1.id
-        p2.type = p1.type
+        p2.param_type = p1.param_type
         append(&r.params, p2)
     }
     
@@ -136,7 +136,7 @@ clone_variable_decl_stmt :: proc(s: ^Variable_Decl_Stmt, allocator := context.al
     
     r := new(Variable_Decl_Stmt)
     r.id = s.id
-    r.type = s.type
+    r.var_type = s.var_type
     r.expr = clone_expression(s.expr)
 
     return r

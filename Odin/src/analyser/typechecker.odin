@@ -17,7 +17,7 @@ typecheck :: proc(an: ^Analyser) {
         defer delete(vars)
         
         for p in f.params {
-            vars[p.id] = p.type            
+            vars[p.id] = p.param_type
         }
 
         for s in f.block.stmts {
@@ -114,11 +114,11 @@ tc_return_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt:  ^ast.Return_Stmt, func
 
 @private
 tc_variable_decl_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Variable_Decl_Stmt) {
-    vars[stmt.id] = stmt.type
+    vars[stmt.id] = stmt.var_type
     
     etype := tc_expression(an, vars, stmt.expr)
     
-    if etype != nil && !ast.is_type_equal(etype, stmt.type) {
+    if etype != nil && !ast.is_type_equal(etype, stmt.var_type) {
         append(&an.errors, Error { "Mismatched type", stmt.id })
     }
 }
@@ -331,7 +331,7 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Primary_Expr) -> 
                 } else {
                     for i in 0 ..< len(v.params) {
                         etype := tc_expression(an, vars, v.params[i])
-                        if !ast.is_type_equal(etype, func.params[i].type) {
+                        if !ast.is_type_equal(etype, func.params[i].param_type) {
                             append(&an.errors, Error { "Invalid type for function call", func.id })
                         } 
                     }

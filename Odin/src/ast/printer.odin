@@ -45,7 +45,7 @@ print_function_decl :: proc(fn: ^Function_Decl) {
 
         for p in fn.params {
             fmt.print("(", p.id, ": ", sep="")
-            print_type(p.type)
+            print_type(p.param_type)
             fmt.print(")")
         }
 
@@ -183,7 +183,7 @@ print_variable_decl_stmt :: proc(stmt: ^Variable_Decl_Stmt, indent: int) {
 
     print_indent(indent + 1)
     fmt.print("type: ")
-    print_type(stmt.type)
+    print_type(stmt.var_type)
     fmt.println()
     
     print_indent(indent + 1)

@@ -5,7 +5,6 @@ import "core:mem"
 import "core:fmt"
 
 // TODO: Create copy functions for easier re-construction of the ast
-// TODO: Rename type member
 
 Ast :: struct {
     functions: [dynamic]^Function_Decl,
@@ -26,7 +25,7 @@ Function_Decl :: struct {
 
 Function_Parameter :: struct {
     id: string,
-    type: Type,
+    param_type: Type,
 }
 
 Block :: struct {
@@ -47,7 +46,7 @@ Statement :: union {
 
 Variable_Decl_Stmt :: struct {
     id: string,
-    type: Type,
+    var_type: Type,
     expr: ^Expression,
 }
 

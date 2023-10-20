@@ -35,13 +35,14 @@ parse_statement :: proc(parser: ^Parser) -> ^ast.Statement {
 
 @private
 parse_index_assignment_stmt :: proc(parser: ^Parser) -> ^ast.Index_Assignment_Stmt {
-    id := peek(parser).lexeme
+    id := peek(parser)
     idx := parse_index_expr(parser)
     expect(parser, .Equal, "Expected '=' operator after index operation")
     expr := parse_expression(parser)
     
     iastmt := new(ast.Index_Assignment_Stmt)
-    iastmt.id = id
+    iastmt.info = { id.line, id.column }
+    iastmt.id = id.lexeme
     iastmt.index = idx
     iastmt.expr = expr
     
@@ -50,12 +51,13 @@ parse_index_assignment_stmt :: proc(parser: ^Parser) -> ^ast.Index_Assignment_St
 
 @private
 parse_assignment_stmt :: proc(parser: ^Parser) -> ^ast.Assignment_Stmt {
-    id := advance(parser).lexeme
+    id := advance(parser)
     expect(parser, .Equal, "Expected '=' operator after variable name")
     expr := parse_expression(parser)
     
     astmt := new(ast.Assignment_Stmt)
-    astmt.id = id
+    astmt.info = { id.line, id.column }
+    astmt.id = id.lexeme
     astmt.expr = expr
     
     return astmt
@@ -63,11 +65,12 @@ parse_assignment_stmt :: proc(parser: ^Parser) -> ^ast.Assignment_Stmt {
 
 @private
 parse_if_stmt :: proc(parser: ^Parser) -> ^ast.If_Stmt {
-    advance(parser) // skip if and elif
+    info := advance(parser) // skip if and elif
     cond := parse_expression(parser)
     block := parse_block(parser)
 
     istmt := new(ast.If_Stmt)
+    istmt.info = { info.line, info.column }
     istmt.cond = cond
     istmt.block = block
     istmt.elif_stmt = nil
@@ -87,11 +90,12 @@ parse_if_stmt :: proc(parser: ^Parser) -> ^ast.If_Stmt {
 
 @private
 parse_while_stmt :: proc(parser: ^Parser) -> ^ast.While_Stmt {
-    expect(parser, .While, "Expected 'while'")
+    info := expect(parser, .While, "Expected 'while'")
     cond := parse_expression(parser)
     block := parse_block(parser)
     
     wstmt := new(ast.While_Stmt)
+    wstmt.info = { info.line, info.column }
     wstmt.cond = cond
     wstmt.block = block
     
@@ -111,10 +115,11 @@ parse_print_stmt :: proc(parser: ^Parser) -> ^ast.Print_Stmt {
 
 @private
 parse_return_stmt :: proc(parser: ^Parser) -> ^ast.Return_Stmt {
-    expect(parser, .Return, "Expected 'return'")
+    info := expect(parser, .Return, "Expected 'return'")
     expr := parse_expression(parser)
 
     rstmt := new(ast.Return_Stmt)
+    rstmt.info = { info.line, info.column }
     rstmt.expr = expr
     
     return rstmt
@@ -124,7 +129,7 @@ parse_return_stmt :: proc(parser: ^Parser) -> ^ast.Return_Stmt {
 parse_var_decl_stmt :: proc(parser: ^Parser) -> ^ast.Variable_Decl_Stmt {
     expect(parser, .Var, "Expected 'var'")
 
-    id := expect(parser, .Identifier, "Expected variable name.").lexeme
+    id := expect(parser, .Identifier, "Expected variable name.")
     expect(parser, .Colon, "Expected ':' after variable name.")
     var_type := parse_type_annotation(parser)
     expect(parser, .Equal, "Expected '=' after type annotation.")
@@ -132,7 +137,8 @@ parse_var_decl_stmt :: proc(parser: ^Parser) -> ^ast.Variable_Decl_Stmt {
     expr := parse_expression(parser)
     
     result := new(ast.Variable_Decl_Stmt)
-    result.id = id
+    result.info = { id.line, id.column }
+    result.id = id.lexeme
     result.var_type = var_type
     result.expr = expr
 

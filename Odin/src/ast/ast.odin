@@ -4,6 +4,8 @@ import vrt "core:mem/virtual"
 import "core:mem"
 import "core:fmt"
 
+import "../shared"
+
 Ast :: struct {
     functions: [dynamic]^Function_Decl,
 
@@ -15,6 +17,7 @@ Ast :: struct {
 }
 
 Function_Decl :: struct {
+    info: shared.Source_Info,
     id: string,
     return_type: Type,
     params: [dynamic]^Function_Parameter,
@@ -22,6 +25,7 @@ Function_Decl :: struct {
 }
 
 Function_Parameter :: struct {
+    info: shared.Source_Info,
     id: string,
     param_type: Type,
 }
@@ -43,12 +47,14 @@ Statement :: union {
 }
 
 Variable_Decl_Stmt :: struct {
+    info: shared.Source_Info,
     id: string,
     var_type: Type,
     expr: ^Expression,
 }
 
 Return_Stmt :: struct {
+    info: shared.Source_Info,
     expr: ^Expression,
 }
 
@@ -57,11 +63,14 @@ Print_Stmt :: struct {
 }
 
 While_Stmt :: struct {
+    info: shared.Source_Info,
     cond: ^Expression,
     block: ^Block,
 }
 
 If_Stmt :: struct {
+    info: shared.Source_Info,
+
     cond: ^Expression,
     block: ^Block,
 
@@ -70,11 +79,13 @@ If_Stmt :: struct {
 }
 
 Assignment_Stmt :: struct {
+    info: shared.Source_Info,
     id: string,
     expr: ^Expression,
 }
 
 Index_Assignment_Stmt :: struct {
+    info: shared.Source_Info,
     id: string,
     index: ^Expression,
     expr: ^Expression,
@@ -113,6 +124,7 @@ Binary_Operator :: enum {
 }
 
 Binary_Expr :: struct  {
+    info: shared.Source_Info,
     op: Binary_Operator,
     lhs: ^Expression,
     rhs: ^Expression,
@@ -124,6 +136,7 @@ Unary_Operator :: enum {
 }
 
 Unary_Expr :: struct {
+    info: shared.Source_Info,
     op: Unary_Operator,
     expr: ^Expression,
 }
@@ -156,14 +169,17 @@ Bool_Lit :: struct {
 }
 
 Array_Lit :: struct {
-    values: [dynamic]^Expression
+    info: shared.Source_Info,
+    values: [dynamic]^Expression,
 }
 
 Identifier :: struct {
-    value: string
+    info: shared.Source_Info,
+    value: string,
 }
 
 Function_Call :: struct {
+    info: shared.Source_Info,
     id: string,
     params: [dynamic]^Expression,
 }

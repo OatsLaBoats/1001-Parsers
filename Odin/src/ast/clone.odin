@@ -1,5 +1,7 @@
 package ast
 
+// TODO: Clone source info
+
 // You need to swap the arena and pass it in. Otherwise the previus tree will be overwriten
 clone :: proc(ast: ^Ast, allocator := context.allocator) -> Ast {
     context.allocator = allocator

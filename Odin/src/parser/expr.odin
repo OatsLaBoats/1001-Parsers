@@ -18,13 +18,14 @@ parse_or_expr :: proc(parser: ^Parser) -> ^ast.Expression {
     
     for {
         if match(parser, .Or) {
-            advance(parser)
+            info := advance(parser)
 
             nexpr := new(ast.Expression)
             bexpr := new(ast.Binary_Expr)
             
             rhs := parse_and_expr(parser)            
             
+            bexpr.info = { info.line, info.column }
             bexpr.op = ast.Binary_Operator.Or
             bexpr.lhs = expr
             bexpr.rhs = rhs
@@ -43,13 +44,14 @@ parse_and_expr :: proc(parser: ^Parser) -> ^ast.Expression {
     
     for {
         if match(parser, .And) {
-            advance(parser)
+            info := advance(parser)
 
             nexpr := new(ast.Expression)
             bexpr := new(ast.Binary_Expr)
             
             rhs := parse_equality_expr(parser)            
             
+            bexpr.info = { info.line, info.column }
             bexpr.op = ast.Binary_Operator.And
             bexpr.lhs = expr
             bexpr.rhs = rhs
@@ -77,6 +79,7 @@ parse_equality_expr :: proc(parser: ^Parser) -> ^ast.Expression {
     // I'm curius how this can be done with pure recursion
     for {
         if match(parser, .Eq) || match(parser, .Neq) {
+            info := peek(parser)
             op := ast.Binary_Operator.Eq if advance(parser).kind == .Eq else ast.Binary_Operator.Neq
 
             nexpr := new(ast.Expression)
@@ -84,6 +87,7 @@ parse_equality_expr :: proc(parser: ^Parser) -> ^ast.Expression {
             
             rhs := parse_comparison_expr(parser)            
             
+            bexpr.info = { info.line, info.column }
             bexpr.op = op
             bexpr.lhs = expr
             bexpr.rhs = rhs
@@ -114,6 +118,7 @@ parse_comparison_expr :: proc(parser: ^Parser) -> ^ast.Expression {
             
             rhs := parse_term_expr(parser)            
             
+            bexpr.info = { tok.line, tok.column }
             bexpr.op = op
             bexpr.lhs = expr
             bexpr.rhs = rhs
@@ -132,6 +137,7 @@ parse_term_expr :: proc(parser: ^Parser) -> ^ast.Expression {
     
     for {
         if match(parser, .Plus) || match(parser, .Minus) {
+            info := peek(parser)
             op := ast.Binary_Operator.Add if advance(parser).kind == .Plus else ast.Binary_Operator.Sub
 
             nexpr := new(ast.Expression)
@@ -139,6 +145,7 @@ parse_term_expr :: proc(parser: ^Parser) -> ^ast.Expression {
             
             rhs := parse_factor_expr(parser)            
             
+            bexpr.info = { info.line, info.column }
             bexpr.op = op
             bexpr.lhs = expr
             bexpr.rhs = rhs
@@ -168,6 +175,7 @@ parse_factor_expr :: proc(parser: ^Parser) -> ^ast.Expression {
             
             rhs := parse_unary_expr(parser)            
             
+            bexpr.info = { tok.line, tok.column }
             bexpr.op = op
             bexpr.lhs = expr
             bexpr.rhs = rhs
@@ -183,12 +191,14 @@ parse_factor_expr :: proc(parser: ^Parser) -> ^ast.Expression {
 @private
 parse_unary_expr :: proc(parser: ^Parser) -> ^ast.Expression {
     if match(parser, .Minus) || match(parser, .Not) {
+        info := peek(parser)
         op := ast.Unary_Operator.Negation if advance(parser).kind == .Minus else ast.Unary_Operator.Not
 
         expr := new(ast.Expression)
         uexpr := new(ast.Unary_Expr)
         
         // Unlike binary operators we can do this nice and easy with recursion
+        uexpr.info = { info.line, info.column }
         uexpr.op = op
         uexpr.expr = parse_unary_expr(parser)
         
@@ -209,6 +219,7 @@ parse_index_expr :: proc(parser: ^Parser) -> ^ast.Expression {
     
     for {
         if match(parser, .L_Bracket) {
+            info := peek(parser)
             expect(parser, .L_Bracket, "Expected '['")
             idx := parse_expression(parser)
             expect(parser, .R_Bracket, "Expected ']'")
@@ -216,6 +227,7 @@ parse_index_expr :: proc(parser: ^Parser) -> ^ast.Expression {
             nexpr := new(ast.Expression)
             bexpr := new(ast.Binary_Expr)
 
+            bexpr.info = { info.line, info.column }
             bexpr.op = ast.Binary_Operator.Index
             bexpr.lhs = expr
             bexpr.rhs = idx
@@ -271,11 +283,12 @@ parse_primary_expr :: proc(parser: ^Parser) -> ^ast.Expression {
     
     // Variables and function calls
     if match(parser, .Identifier) {
-        id := advance(parser).lexeme
+        id := advance(parser)
 
         if match(parser, .L_Paren) {
             fcall := new(ast.Function_Call)
-            fcall.id = id
+            fcall.id = id.lexeme
+            fcall.info = { id.line, id.column }
             
             advance(parser)
             for {
@@ -294,7 +307,7 @@ parse_primary_expr :: proc(parser: ^Parser) -> ^ast.Expression {
                 }
             }
         } else {
-            pexpr^ = ast.Identifier { id }
+            pexpr^ = ast.Identifier { { id.line, id.column }, id.lexeme }
             expr^ = pexpr
             return expr
         }
@@ -302,9 +315,10 @@ parse_primary_expr :: proc(parser: ^Parser) -> ^ast.Expression {
     
     // Array literals
     if match(parser, .L_Bracket) {
-        advance(parser)
+        info := advance(parser)
         
         al := new(ast.Array_Lit)
+        al.info = { info.line, info.column }
         
         for {
             if match(parser, .R_Bracket) {

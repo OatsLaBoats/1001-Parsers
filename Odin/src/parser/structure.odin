@@ -18,6 +18,7 @@ parse_function_decl :: proc(parser: ^Parser) -> ^ast.Function_Decl {
     block := parse_block(parser)
     
     result := new(ast.Function_Decl)
+    result.info = { id.line, id.column }
     result.id = id.lexeme
     result.return_type = return_type
     result.params = params
@@ -71,12 +72,13 @@ parse_function_paramters :: proc(parser: ^Parser) -> [dynamic]^ast.Function_Para
 
 @private
 parse_parameter :: proc(parser: ^Parser) -> ^ast.Function_Parameter {
-    id := expect(parser, .Identifier, "Expected parameter name after '('.").lexeme
+    id := expect(parser, .Identifier, "Expected parameter name after '('.")
     expect(parser, .Colon, "Expected ':' after parameter name.")
     param_type := parse_type_annotation(parser)
 
     result := new(ast.Function_Parameter)
-    result.id = id
+    result.info = { id.line, id.column }
+    result.id = id.lexeme
     result.param_type = param_type
 
     return result

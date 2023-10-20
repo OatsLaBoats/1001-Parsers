@@ -1,13 +1,18 @@
 package analyser
 
+import "core:strings"
+import "core:fmt"
+
+import "../shared"
 import ast "../ast"
 
+// TODO: Create delete function for Error_List
 
 Error_List :: [dynamic]Error
 
 Error :: struct {
-    msg: string,
-    id: string,
+    info: shared.Source_Info,
+    msg: strings.Builder,
 }
 
 @private
@@ -17,10 +22,11 @@ Analyser :: struct {
     tree: ^ast.Ast,
 }
 
-analyse :: proc(tree: ^ast.Ast) -> Error_List {
+analyse :: proc(tree: ^ast.Ast, allocator := context.allocator) -> Error_List {
+    context.allocator = allocator
+
     an := Analyser {}
     an.tree = tree
-
     defer delete(an.functions)
 
     duplicate_function_check(&an)
@@ -34,7 +40,7 @@ analyse :: proc(tree: ^ast.Ast) -> Error_List {
 duplicate_function_check :: proc(an: ^Analyser) {
     for f in an.tree.functions {
         if f.id in an.functions {
-            append(&an.errors, Error { "Duplicate function", f.id })
+            append(&an.errors, make_error(f.info, "Function \"%s\" is already defined", f.id))
         } else {
             an.functions[f.id] = f
         }
@@ -49,7 +55,7 @@ duplicate_variable_check :: proc(an: ^Analyser) {
 
         for p in f.params {
             if p.id in var_table {
-                append(&an.errors, Error { "Duplicate variable", p.id })
+                append(&an.errors, make_error(p.info, "Parameter \"%s\" is already defined", p.id))
             } else {
                 var_table[p.id] = true
             }
@@ -60,7 +66,7 @@ duplicate_variable_check :: proc(an: ^Analyser) {
                 case ^ast.Variable_Decl_Stmt: {
                     if v.id in var_table {
                         f.block.stmts[i] = nil
-                        append(&an.errors, Error { "Duplicate variable", v.id })
+                        append(&an.errors, make_error(v.info, "Variable \"%s\" is already defined", v.id))
                     } else {
                         var_table[v.id] = true
                     }
@@ -69,17 +75,37 @@ duplicate_variable_check :: proc(an: ^Analyser) {
                 case ^ast.Assignment_Stmt: {
                     if !(v.id in var_table) {
                         f.block.stmts[i] = nil
-                        append(&an.errors, Error { "Variable not found", v.id })
+                        append(&an.errors, make_error(v.info, "Variable \"%s\" is not defined", v.id))
                     }
                 }
                 
                 case ^ast.Index_Assignment_Stmt: {
                     if !(v.id in var_table) {
                         f.block.stmts[i] = nil
-                        append(&an.errors, Error { "Variable not found", v.id })
+                        append(&an.errors, make_error(v.info, "Variable \"%s\" is not defined", v.id))
                     }
                 }
             }
         }
     }
+}
+
+@private
+init_error :: proc(info: shared.Source_Info = {0, 0}) -> Error {
+    result := Error { info = info }
+    strings.builder_init(&result.msg)
+    return result
+}
+
+@private 
+make_error :: proc(info: shared.Source_Info, format: string, args: ..any) -> Error {
+    result := Error { info = info }
+    strings.builder_init(&result.msg)
+    fmt.sbprintf(&result.msg, format, ..args)
+    return result
+}
+
+@private
+delete_error :: proc(error: ^Error) {
+    strings.builder_destroy(&error.msg)
 }

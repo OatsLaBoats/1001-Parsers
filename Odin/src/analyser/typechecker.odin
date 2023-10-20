@@ -1,9 +1,9 @@
 package analyser
 
 // TODO: Clean this up cause holy shit its a mess
+// TODO: change "" to '' in errors
 
 import "core:fmt"
-import "core:slice"
 
 import "../ast"
 
@@ -23,6 +23,7 @@ typecheck :: proc(an: ^Analyser) {
             if s != nil do tc_statement(an, &vars, s, f.id)
         }
         
+        // Check for missing return
         if f.return_type != nil {
             return_found := false
             
@@ -34,12 +35,9 @@ typecheck :: proc(an: ^Analyser) {
             }
             
             if !return_found {
-                append(&an.errors, Error { "missing return statement", f.id })
+                append(&an.errors, make_error(f.info, "Function '%s' is missing a 'return' statement", f.id))
             }
         }
-    
-        // We may need to allocate space for an array type in that case we should free the temporary allocator
-        free_all(context.temp_allocator)
     }
 }
 
@@ -64,7 +62,7 @@ tc_index_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Index_Assignment_St
     tc_expression(an, vars, stmt.index)
 
     if etype != nil && !ast.is_type_equal(etype, var) {
-        append(&an.errors, Error { "Type mismatch", stmt.id })
+        append(&an.errors, make_error(stmt.info, "Variable '%s' doesn't match the assignment expression type", stmt.id))
     }
 }
 
@@ -74,7 +72,7 @@ tc_assignment_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Assignment_Stm
     etype := tc_expression(an, vars, stmt.expr)
     
     if etype != nil && !ast.is_type_equal(var, etype) {
-        append(&an.errors, Error { "Type mismatch", stmt.id })
+        append(&an.errors, make_error(stmt.info, "Variable '%s' doesn't match the assignment expression type", stmt.id))
     }
 }
 
@@ -82,7 +80,7 @@ tc_assignment_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Assignment_Stm
 tc_if_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.If_Stmt, func_id: string) {
     etype := tc_expression(an, vars, stmt.cond)
     if etype != nil && !ast.is_type_equal(etype, ast.BOOL_TYPE) {
-        append(&an.errors, Error { "Conditional expression does not return 'Bool'", "" })
+        append(&an.errors, make_error(stmt.info, "'if' conditional must be of type 'Bool'"))
     }
 
     for s in stmt.block.stmts {
@@ -103,7 +101,7 @@ tc_while_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.While_Stmt, func_id
     etype := tc_expression(an, vars, stmt.cond)
     if etype != nil && !ast.is_type_equal(etype, ast.BOOL_TYPE) {
         fmt.println(etype)
-        append(&an.errors, Error { "Conditional expression does not return 'Bool'", "" })
+        append(&an.errors, make_error(stmt.info, "'while' conditional must be of type 'Bool'"))
     }
     
     for s in stmt.block.stmts {
@@ -119,13 +117,15 @@ tc_print_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Print_Stmt) {
 @private
 tc_return_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt:  ^ast.Return_Stmt, func_id: string) {
     func := an.functions[func_id]
-    etype := tc_expression(an, vars, stmt.expr)
 
     if func.return_type == nil {
-        append(&an.errors, Error { "function shouldn't have a return statement", func.id })
-    } else if etype != nil && !ast.is_type_equal(func.return_type, etype) {
-        append(&an.errors, Error { "return statement does not match function return type", func.id })
-    }
+        append(&an.errors, make_error(func.info, "Function '%s' shouldn't have a 'return' statment"))
+    } else {
+        etype := tc_expression(an, vars, stmt.expr)
+        if etype != nil && !ast.is_type_equal(func.return_type, etype) {
+            append(&an.errors, make_error(stmt.info, "'return' doesn't match the function '%s' return type", func.id))
+        }
+    }        
 }
 
 @private
@@ -135,7 +135,7 @@ tc_variable_decl_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Variable_De
     etype := tc_expression(an, vars, stmt.expr)
     
     if etype != nil && !ast.is_type_equal(etype, stmt.var_type) {
-        append(&an.errors, Error { "Mismatched type", stmt.id })
+        append(&an.errors, make_error(stmt.info, "Variable '%s' doesn't match the assignment expression type", stmt.id))
     }
 }
 
@@ -163,7 +163,8 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
             b2 := ast.is_type_equal(rtype, ast.BOOL_TYPE)
             
             if !b1 || !b2 {
-                append(&an.errors, Error { "'or' and 'and' only work with 'Bool'", "" })
+                op := "or" if expr.op == .Or else "and"
+                append(&an.errors, make_error(expr.info, "'%s' requires operands of type 'Bool'", op))
             } else {
                 return ast.BOOL_TYPE
             }
@@ -171,7 +172,8 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
         
         case .Eq, .Neq: {
             if !ast.is_type_equal(ltype, rtype) {
-                append(&an.errors, Error { "'==' and '!=' need the same type on both sides", "" })
+                op := "==" if expr.op == .Eq else "!="
+                append(&an.errors, make_error(expr.info, "'%s' requires operands of the same type", op))
             } else {
                 return ast.BOOL_TYPE
             }
@@ -188,7 +190,12 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
             n2 := f2 || i2
             
             if !n1 || !n2 {
-                append(&an.errors, Error { "'>', '<', '>=', '<=', '-', '*', '/' and '%' only work on 'Float' and 'Int'", "" })
+                op := ">"
+                if expr.op == .Lt do op = "<"
+                else if expr.op == .Gt_Eq do op = ">="
+                else if expr.op == .Lt_Eq do op = "<="
+                
+                append(&an.errors, make_error(expr.info, "'%s' requires operands either of type 'Float' or 'Int'", op))
             } else {
                 return ast.BOOL_TYPE
             }
@@ -205,7 +212,12 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
             n2 := f2 || i2
             
             if !n1 || !n2 {
-                append(&an.errors, Error { "'>', '<', '>=', '<=', '-', '*', '/' and '%' only work on 'Float' and 'Int'", "" })
+                op := "-"
+                if expr.op == .Mul do op = "*"
+                else if expr.op == .Div do op = "/"
+                else if expr.op == .Mod do op = "%"
+
+                append(&an.errors, make_error(expr.info, "'%s' requires operands either of type 'Float' or 'Int'", op))
             } else {
                 if f1 || f2 {
                     return ast.FLOAT_TYPE
@@ -230,9 +242,9 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
                     return ast.STRING_TYPE
                 } else {
                     if !ast.is_array_type(ltype) && !ast.is_array_type(rtype) {
-                        append(&an.errors, Error { "'+' only works with 'String', 'Array', 'Int' and 'Float'", "" })
+                        append(&an.errors, make_error(expr.info, "'+' requires operands of type 'String', 'Array', 'Int' or 'Float'"))
                     } else if !ast.is_type_equal(ltype, rtype) {
-                        append(&an.errors, Error { "Arrays are different types", "" })
+                        append(&an.errors, make_error(expr.info, "Arrays contain different types"))
                     } else {
                         return ltype
                     }
@@ -251,10 +263,10 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
                 if ast.is_type_equal(rtype, ast.INT_TYPE) {
                     return ast.get_array_type_internal(ltype)
                 } else {
-                    append(&an.errors, Error { "You can only use 'Int' to index a collection", "" })
+                    append(&an.errors, make_error(expr.info, "Indexing requires type of 'Int'"))
                 }
             } else {
-                append(&an.errors, Error { "You can only index Strings and Arrays", "" })
+                append(&an.errors, make_error(expr.info, "Attempt to index data that is not an array or string"))
             }
         }
     }
@@ -269,12 +281,12 @@ tc_unary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Unary_Expr) -> ast.
     
     if expr.op == .Negation {
         if !ast.is_type_equal(etype, ast.INT_TYPE) && !ast.is_type_equal(etype, ast.FLOAT_TYPE) {
-            append(&an.errors, Error { "'-' only works with 'Int' or 'Float'", "" })
+            append(&an.errors, make_error(expr.info, "'-' requires both operands to be of type 'Float' or 'Int'"))
             return nil
         }
     } else {
         if !ast.is_type_equal(etype, ast.BOOL_TYPE) {
-            append(&an.errors, Error { "'not' only works with 'Bool'", "" })
+            append(&an.errors, make_error(expr.info, "'not' requires both operands to be of type 'Bool'"))
             return nil
         }
     }
@@ -295,7 +307,7 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Primary_Expr) -> 
                 var := vars[v.value]
                 return var
             } else {
-                append(&an.errors, Error { "Variable does not exist", v.value })
+                append(&an.errors, make_error(v.info, "Variable '%s' doesn't exist", v.value))
             }
         }
         
@@ -323,7 +335,7 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Primary_Expr) -> 
                 }
                 
                 if !ast.is_type_equal(first_type, lit_type) {
-                    append(&an.errors, Error { "Multiple types in array literal", "" })
+                    append(&an.errors, make_error(v.info, "Multiple different types in array literal"))
                     return nil
                 }
             }
@@ -338,19 +350,19 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Primary_Expr) -> 
                 func := an.functions[v.id]
 
                 if len(v.params) > len(func.params) {
-                    append(&an.errors, Error { "Too many parameters passed into function", func.id })
+                    append(&an.errors, make_error(v.info, "Too many arguments passed into function '%s'", v.id))
                 } else {
                     for i in 0 ..< len(v.params) {
                         etype := tc_expression(an, vars, v.params[i])
                         if !ast.is_type_equal(etype, func.params[i].param_type) {
-                            append(&an.errors, Error { "Invalid type for function call", func.id })
+                            append(&an.errors, make_error(v.info, "Type mismatch with with argument %s", i + 1))
                         } 
                     }
                 }
 
                 return func.return_type
             } else {
-                append(&an.errors, Error { "Function does not exist", v.id })
+                append(&an.errors, make_error(v.info, "Function '%s' doesn't exist", v.id))
             }
         }
     }

@@ -12,8 +12,6 @@
 // I am stuck at how to parse expressions and statements. I need to see how this is done elsewhere before proceeding
 // https://github.com/munificent/craftinginterpreters/tree/master/java/com/craftinginterpreters/lox
 
-// TODO: Store line information in the ast
-
 package parser
 
 import lx "../lexer"

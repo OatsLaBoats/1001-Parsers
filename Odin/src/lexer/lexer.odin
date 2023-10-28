@@ -2,6 +2,8 @@ package lexer
 
 import "core:fmt"
 
+// NOTE: Should probably swap to using Source_Info and unify the error types
+
 Token_Kind :: enum {
     // Keywords
     Fun, Return, Print, Var, 

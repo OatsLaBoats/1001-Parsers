@@ -5,6 +5,7 @@ import "core:os"
 
 import "../ast"
 
+// TODO: Fix bug where raw expression are illegal
 @private
 parse_statement :: proc(parser: ^Parser) -> ^ast.Statement {
     result := new(ast.Statement)
@@ -35,8 +36,12 @@ parse_statement :: proc(parser: ^Parser) -> ^ast.Statement {
 
 @private
 parse_index_assignment_stmt :: proc(parser: ^Parser) -> ^ast.Index_Assignment_Stmt {
-    id := peek(parser)
-    idx := parse_index_expr(parser)
+    id := advance(parser)
+
+    expect(parser, .L_Bracket, "Expected '[' after identifier")
+    idx := parse_expression(parser)
+    expect(parser, .R_Bracket, "Expected ']' after index expression")
+
     expect(parser, .Equal, "Expected '=' operator after index operation")
     expr := parse_expression(parser)
     

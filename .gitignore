@@ -1,5 +1,6 @@
 benchmark.sigma
 ols.json
 *.exe
+*.pdb
 notes.txt
 a.sigma

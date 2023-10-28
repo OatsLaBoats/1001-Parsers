@@ -16,6 +16,7 @@ Ast :: struct {
     _to_free: ^vrt.Arena,
 }
 
+// TODO: Rename to Function
 Function_Decl :: struct {
     info: shared.Source_Info,
     id: string,

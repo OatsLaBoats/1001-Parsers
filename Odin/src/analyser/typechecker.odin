@@ -1,7 +1,6 @@
 package analyser
 
 // TODO: Clean this up cause holy shit its a mess
-// TODO: change "" to '' in errors
 
 import "core:fmt"
 
@@ -24,6 +23,7 @@ typecheck :: proc(an: ^Analyser) {
         }
         
         // Check for missing return
+        // TODO: Scan deeper
         if f.return_type != nil {
             return_found := false
             
@@ -50,16 +50,19 @@ tc_statement :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Statement, func_id: 
         case ^ast.While_Stmt: tc_while_stmt(an, vars, s, func_id)
         case ^ast.If_Stmt: tc_if_stmt(an, vars, s, func_id)
         case ^ast.Assignment_Stmt: tc_assignment_stmt(an, vars, s)
-        case ^ast.Index_Assignment_Stmt: tc_index_stmt(an, vars, s)
+        case ^ast.Index_Assignment_Stmt: tc_index_assignment_stmt(an, vars, s)
     }
 }
 
 @private
-tc_index_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Index_Assignment_Stmt) {
+tc_index_assignment_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Index_Assignment_Stmt) {
     var := ast.get_array_type_internal(vars[stmt.id])
+    itype := tc_expression(an, vars, stmt.index)
     etype := tc_expression(an, vars, stmt.expr)
     
-    tc_expression(an, vars, stmt.index)
+    if itype != nil && !ast.is_type_equal(itype, ast.INT_TYPE) {
+        append(&an.errors, make_error(stmt.info, "Indexes can only be of type 'Int'"))
+    }
 
     if etype != nil && !ast.is_type_equal(etype, var) {
         append(&an.errors, make_error(stmt.info, "Variable '%s' doesn't match the assignment expression type", stmt.id))
@@ -89,7 +92,7 @@ tc_if_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.If_Stmt, func_id: stri
     
     if stmt.elif_stmt != nil {
         tc_if_stmt(an, vars, stmt.elif_stmt, func_id)
-    } else {
+    } else if stmt.else_block != nil {
         for s in stmt.else_block.stmts {
             if s != nil do tc_statement(an, vars, s, func_id)
         }
@@ -169,7 +172,8 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
                 return ast.BOOL_TYPE
             }
         }
-        
+
+        // TODO: Enable comparison between INT and FLOAT
         case .Eq, .Neq: {
             if !ast.is_type_equal(ltype, rtype) {
                 op := "==" if expr.op == .Eq else "!="
@@ -201,6 +205,7 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
             }
         }
         
+        // TODO: Disable float MOD
         case .Sub, .Mul, .Div, .Mod: {
             f1 := ast.is_type_equal(ltype, ast.FLOAT_TYPE)
             f2 := ast.is_type_equal(rtype, ast.FLOAT_TYPE)
@@ -258,6 +263,7 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
             }
         }
         
+        // TODO: Remove string indexing
         case .Index: {
             if ast.is_type_equal(ltype, ast.STRING_TYPE) || ast.is_array_type(ltype) {
                 if ast.is_type_equal(rtype, ast.INT_TYPE) {

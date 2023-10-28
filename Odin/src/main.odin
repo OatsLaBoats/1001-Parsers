@@ -9,22 +9,24 @@ import "lexer"
 import "parser"
 import "analyser"
 import "ast"
+import "interpreter"
 
 // TODO: Make a repl
 // TODO: Make commandline options: select file, on/off token printer, on/off ast printer, on/off only compiling
-// TODO: Redo the error system for the whole project. After the initial pass add sourcve information for everything and also include start and end index
-//       And further refine the rror system.
-//       Look to write better error messages
 // TODO: Add structs using data keyword
 // TODO: Cleanup the ast to remove nil statements
 // TODO: Rename function_decl to def because its not a declaration
+// TODO: Rethink the lexer and parser error system maybe unify them all.
+// TODO: Use temp_allocator more
+// TODO: Use normal allocator instead of arena
+// TODO: Cleanup code and change to better variable names
 
 main :: proc() {
     print_tokens := false
     print_ast := false
     optimise := false
     only_compile := false
-    filename := "../test.sigma"
+    filename := "../benchmark.sigma"
 
     for arg in os.args[1:] {
         switch arg {
@@ -82,7 +84,7 @@ main :: proc() {
     
     if len(lex.errors) > 0 {
         for error in lex.errors {
-            fmt.println("Error:", error)
+            fmt.printf("Error(%d:%d):", error.line, error.column, error)
         }
         
         os.exit(-1)
@@ -109,8 +111,15 @@ main :: proc() {
     }
 
     analyser_errors := analyser.analyse(&tree)
+    defer analyser.delete_error_list(analyser_errors)
 
-    for e in analyser_errors {
-        fmt.printf("Error [%d:%d]: %s\n", e.info.line, e.info.column, strings.to_string(e.msg))
+    if len(analyser_errors) > 0 {
+        for e in analyser_errors {
+            fmt.printf("Error(%d:%d): %s\n", e.info.line, e.info.column, strings.to_string(e.msg))
+        }       
+        
+        os.exit(-1)
     }
+    
+    err_code := interpreter.eval(&tree)
 }

@@ -26,7 +26,7 @@ main :: proc() {
     print_ast := false
     optimise := false
     only_compile := false
-    filename := "../benchmark.sigma"
+    filename := "../a.sigma"
 
     for arg in os.args[1:] {
         switch arg {
@@ -115,7 +115,11 @@ main :: proc() {
 
     if len(analyser_errors) > 0 {
         for e in analyser_errors {
-            fmt.printf("Error(%d:%d): %s\n", e.info.line, e.info.column, strings.to_string(e.msg))
+            if e.info.column == -1 {
+                fmt.printf("Error: %s\n", strings.to_string(e.msg))
+            } else {
+                fmt.printf("Error(%d:%d): %s\n", e.info.line, e.info.column, strings.to_string(e.msg))
+            }
         }       
         
         os.exit(-1)

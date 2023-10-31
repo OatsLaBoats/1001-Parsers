@@ -7,7 +7,6 @@ import "../shared"
 import ast "../ast"
 
 // TODO: Create delete function for Error_List
-// TODO: Ensure mains exists and has the correct type
 
 Error_List :: [dynamic]Error
 
@@ -41,10 +40,29 @@ analyse :: proc(tree: ^ast.Ast, allocator := context.allocator) -> Error_List {
     defer delete(an.functions)
 
     duplicate_function_check(&an)
+    check_main(&an)
     duplicate_variable_check(&an)
     typecheck(&an)
     
     return an.errors
+}
+
+@private
+check_main :: proc(an: ^Analyser) {
+    if !("main" in an.functions) {
+        append(&an.errors, make_error({-1, -1}, "Missing 'main' function"))
+        return
+    }
+
+    f := an.functions["main"]
+    
+    if len(f.params) > 0 {
+        append(&an.errors, make_error(f.info, "'main' should have no parameters"))
+    }
+
+    if !ast.is_type_equal(f.return_type, ast.INT_TYPE) {
+        append(&an.errors, make_error(f.info, "'main' should have return type 'Int'"))
+    }
 }
 
 @private

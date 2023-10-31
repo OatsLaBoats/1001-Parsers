@@ -1,3 +1,4 @@
+// TODO: Break this into multiple files
 package interpreter
 
 import "core:strings"
@@ -92,6 +93,7 @@ eval_function :: proc(env: ^Interpreter, f: ^ast.Function_Decl, params: Maybe([]
 // Returns non-nil if a return statement was called
 @private
 eval_block :: proc(env: ^Interpreter, parent: ^Scope, b: ^ast.Block) -> Value {
+    // TODO: Make this so we only create a scope when needed not when we enter a function
     scope := Scope { parent = parent }
     defer delete_scope(scope)
     

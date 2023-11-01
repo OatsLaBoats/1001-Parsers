@@ -20,6 +20,7 @@ import "interpreter"
 // TODO: Use temp_allocator more
 // TODO: Use normal allocator instead of arena
 // TODO: Cleanup code and change to better variable names
+// TODO: Add builtin functions
 
 main :: proc() {
     print_tokens := false
@@ -33,12 +34,12 @@ main :: proc() {
             case "--help": {
                 fmt.println("Usage: sigma [options...] \"source file\"")
                 fmt.println("Options:")
-                fmt.println("         --help           Displays this message.")
-                fmt.println("         --print-ast      Prints out the synatax tree.")
-                fmt.println("         --print-tokens   Prints out the stream of lexer tokens.")
-                fmt.println("         --print-all      Enables all printing functionality.")
-                fmt.println("         --fast           Enables optimization.")
-                fmt.println("         --only-compile   Compiles the script without running it.")
+                fmt.println("         --help          Displays this message.")
+                fmt.println("         --print-ast     Prints out the synatax tree.")
+                fmt.println("         --print-tokens  Prints out the stream of lexer tokens.")
+                fmt.println("         --print-all     Enables all printing functionality.")
+                fmt.println("         --fast          Enables optimization.")
+                fmt.println("         --only-compile  Compiles the script without running it.")
                 os.exit(0)
             }
 
@@ -69,11 +70,16 @@ main :: proc() {
         os.exit(-1)
     }
     
+    if !os.exists(filename) {
+        fmt.println("Error: File \"", filename, "\" doesn't exist", sep="")
+        os.exit(-1)
+    }
+    
     contents, success := os.read_entire_file_from_filename(filename)
     defer delete(contents)
 
     if !success {
-        fmt.println("Failed to read file.")
+        fmt.println("Error: Failed to read file \"", filename, "\"", sep="")
         os.exit(-1)
     }
     
@@ -115,8 +121,10 @@ main :: proc() {
 
     if len(analyser_errors) > 0 {
         for e in analyser_errors {
-            if e.info.column == -1 {
+            if e.info.line == -1 {
                 fmt.printf("Error: %s\n", strings.to_string(e.msg))
+            } else if e.info.column == -1 {
+                fmt.printf("Error(%d): %s\n", e.info.line, strings.to_string(e.msg))
             } else {
                 fmt.printf("Error(%d:%d): %s\n", e.info.line, e.info.column, strings.to_string(e.msg))
             }
@@ -125,5 +133,8 @@ main :: proc() {
         os.exit(-1)
     }
     
+    if only_compile do os.exit(0)
+    
     err_code := interpreter.eval(&tree)
+    if err_code != 0 do fmt.println("Interpreter returned", err_code)
 }

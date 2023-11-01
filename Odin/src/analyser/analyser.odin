@@ -6,8 +6,6 @@ import "core:fmt"
 import "../shared"
 import ast "../ast"
 
-// TODO: Create delete function for Error_List
-
 Error_List :: [dynamic]Error
 
 // NOTE: In a real compiler this would probably include two error messages. A simple one and a more detailed one with source snipets.

@@ -215,8 +215,7 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
             }
         }
         
-        // TODO: Disable float MOD
-        case .Sub, .Mul, .Div, .Mod: {
+        case .Sub, .Mul, .Div: {
             f1 := ast.is_type_equal(ltype, ast.FLOAT_TYPE)
             f2 := ast.is_type_equal(rtype, ast.FLOAT_TYPE)
             
@@ -230,7 +229,6 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
                 op := "-"
                 if expr.op == .Mul do op = "*"
                 else if expr.op == .Div do op = "/"
-                else if expr.op == .Mod do op = "%"
 
                 append(&an.errors, make_error(expr.info, "'%s' requires operands either of type 'Float' or 'Int'", op))
             } else {
@@ -239,6 +237,14 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
                 } else {
                     return ast.INT_TYPE
                 }
+            }
+        }
+        
+        case .Mod: {
+            if ast.is_type_equal(ltype, ast.INT_TYPE) && ast.is_type_equal(rtype, ast.INT_TYPE) {
+                return ast.INT_TYPE
+            } else {
+                append(&an.errors, make_error(expr.info, "'%%' requires operands of type 'Int'"))
             }
         }
 

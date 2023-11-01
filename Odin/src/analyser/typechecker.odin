@@ -173,13 +173,23 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
             }
         }
 
-        // TODO: Enable comparison between INT and FLOAT
         case .Eq, .Neq: {
-            if !ast.is_type_equal(ltype, rtype) {
+            f1 := ast.is_type_equal(ltype, ast.FLOAT_TYPE)
+            f2 := ast.is_type_equal(rtype, ast.FLOAT_TYPE)
+            
+            i1 := ast.is_type_equal(ltype, ast.INT_TYPE)
+            i2 := ast.is_type_equal(rtype, ast.INT_TYPE)
+
+            n1 := f1 || i1
+            n2 := f2 || i2
+
+            is_number := n1 && n2
+
+            if is_number || ast.is_type_equal(ltype, rtype) {
+                return ast.BOOL_TYPE
+            } else {
                 op := "==" if expr.op == .Eq else "!="
                 append(&an.errors, make_error(expr.info, "'%s' requires operands of the same type", op))
-            } else {
-                return ast.BOOL_TYPE
             }
         }
 

@@ -738,13 +738,17 @@ print_value :: proc(value: Value, newline := true) {
 compare_values :: proc(v1, v2: Value) -> Bool_Value {
     switch v in v1 {
         case Int_Value: {
-            r := v2.(Int_Value)
-            return Bool_Value { v.value == r.value }
+            #partial switch n in v2 {
+                case Int_Value: return Bool_Value { v.value == n.value }
+                case Float_Value: return Bool_Value { f64(v.value) == n.value }
+            }
         }
         
         case Float_Value: {
-            r := v2.(Float_Value)
-            return Bool_Value { v.value == r.value }
+            #partial switch n in v2 {
+                case Int_Value: return Bool_Value { v.value == f64(n.value) }
+                case Float_Value: return Bool_Value { v.value == n.value }
+            }
         }
         
         case Bool_Value: {

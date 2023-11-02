@@ -279,16 +279,15 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
             }
         }
         
-        // TODO: Remove string indexing
         case .Index: {
-            if ast.is_type_equal(ltype, ast.STRING_TYPE) || ast.is_array_type(ltype) {
+            if ast.is_array_type(ltype) {
                 if ast.is_type_equal(rtype, ast.INT_TYPE) {
                     return ast.get_array_type_internal(ltype)
                 } else {
-                    append(&an.errors, make_error(expr.info, "Indexing requires type of 'Int'"))
+                    append(&an.errors, make_error(expr.info, "Index must be of type 'Int'"))
                 }
             } else {
-                append(&an.errors, make_error(expr.info, "Attempt to index data that is not an array or string"))
+                append(&an.errors, make_error(expr.info, "Attempt to index data that is not an array"))
             }
         }
     }

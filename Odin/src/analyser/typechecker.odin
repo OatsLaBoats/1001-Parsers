@@ -21,23 +21,6 @@ typecheck :: proc(an: ^Analyser) {
         for s in f.block.stmts {
             if s != nil do tc_statement(an, &vars, s, f.id)
         }
-        
-        // Check for missing return
-        // TODO: Scan deeper
-        if f.return_type != nil {
-            return_found := false
-            
-            if len(f.block.stmts) > 0 {
-                last := f.block.stmts[len(f.block.stmts) - 1]
-                #partial switch v in last {
-                    case ^ast.Return_Stmt: return_found = true
-                }               
-            }
-            
-            if !return_found {
-                append(&an.errors, make_error(f.info, "Function '%s' is missing a 'return' statement", f.id))
-            }
-        }
     }
 }
 

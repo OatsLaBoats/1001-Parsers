@@ -37,9 +37,13 @@ analyse :: proc(tree: ^ast.Ast, allocator := context.allocator) -> Error_List {
     an.tree = tree
     defer delete(an.functions)
 
-    duplicate_function_check(&an)
+    // Fill the function table
+    collect_functions(&an)
+
+    // Run analysers
     check_main(&an)
     duplicate_variable_check(&an)
+    check_missing_return(&an)
     typecheck(&an)
     
     return an.errors
@@ -64,7 +68,7 @@ check_main :: proc(an: ^Analyser) {
 }
 
 @private
-duplicate_function_check :: proc(an: ^Analyser) {
+collect_functions :: proc(an: ^Analyser) {
     for f in an.tree.functions {
         if f.id in an.functions {
             append(&an.errors, make_error(f.info, "Function '%s' is already defined", f.id))

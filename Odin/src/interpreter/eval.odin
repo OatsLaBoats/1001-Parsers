@@ -9,12 +9,12 @@ Error_Code :: i64
 
 @private
 Environment :: struct {
-    functions: map[string]^ast.Function_Decl
+    functions: map[string]^ast.Function
 }
 
 eval :: proc(tree: ^ast.Ast) -> Error_Code {
     env := Environment {}
-    env.functions = make(map[string]^ast.Function_Decl, allocator = context.temp_allocator)
+    env.functions = make(map[string]^ast.Function, allocator = context.temp_allocator)
     defer free_all(context.temp_allocator)
     
     for f in tree.functions {

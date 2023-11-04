@@ -7,7 +7,7 @@ import "core:fmt"
 import "../shared"
 
 Ast :: struct {
-    functions: [dynamic]^Function_Decl,
+    functions: [dynamic]^Function,
 
     _arena1: ^vrt.Arena,
     _arena2: ^vrt.Arena,
@@ -16,8 +16,7 @@ Ast :: struct {
     _to_free: ^vrt.Arena,
 }
 
-// TODO: Rename to Function
-Function_Decl :: struct {
+Function :: struct {
     info: shared.Source_Info,
     id: string,
     return_type: Type,
@@ -220,7 +219,7 @@ init :: proc(ast: ^Ast, allocator := context.allocator) -> bool {
     ast._arena_p = ast._arena1
     ast._to_free = nil
 
-    ast.functions = make([dynamic]^Function_Decl, vrt.arena_allocator(ast._arena_p))
+    ast.functions = make([dynamic]^Function, vrt.arena_allocator(ast._arena_p))
 
     return false
 }

@@ -18,7 +18,7 @@ Error :: struct {
 @private
 Analyser :: struct {
     errors: Error_List,
-    functions: map[string]^ast.Function_Decl,
+    functions: map[string]^ast.Function,
     tree: ^ast.Ast,
 }
 

@@ -3,7 +3,7 @@ package interpreter
 import "../ast"
 
 @private
-eval_function :: proc(env: ^Environment, f: ^ast.Function_Decl, params: Maybe([]Value)) -> Value {
+eval_function :: proc(env: ^Environment, f: ^ast.Function, params: Maybe([]Value)) -> Value {
     scope := Scope {}
     defer delete_scope(scope)
     

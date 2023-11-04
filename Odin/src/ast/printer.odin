@@ -27,8 +27,8 @@ print_type :: proc(t: Type) {
 }
 
 @private
-print_function_decl :: proc(fn: ^Function_Decl) {
-    fmt.println("<Function_Decl>")
+print_function_decl :: proc(fn: ^Function) {
+    fmt.println("<Function>")
     print_indent(0)
     fmt.println("name:", fn.id)
 

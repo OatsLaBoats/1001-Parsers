@@ -11,7 +11,7 @@ clone :: proc(ast: ^Ast, allocator := context.allocator) -> Ast {
         _arena2 = ast._arena2,
         _arena_p = ast._arena_p,
         _to_free = ast._to_free,
-        functions = make([dynamic]^Function_Decl),
+        functions = make([dynamic]^Function),
     }
     
     for f in ast.functions {
@@ -21,10 +21,10 @@ clone :: proc(ast: ^Ast, allocator := context.allocator) -> Ast {
     return r
 }
 
-clone_function_decl :: proc(f: ^Function_Decl, allocator := context.allocator) -> ^Function_Decl {
+clone_function_decl :: proc(f: ^Function, allocator := context.allocator) -> ^Function {
     context.allocator = allocator
 
-    r := new(Function_Decl)
+    r := new(Function)
     r.id = f.id
     r.return_type = f.return_type
     r.params = make([dynamic]^Function_Parameter)

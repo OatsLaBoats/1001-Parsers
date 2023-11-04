@@ -41,6 +41,7 @@ eval_block :: proc(env: ^Environment, parent: ^Scope, b: ^ast.Block) -> Value {
             case ^ast.If_Stmt: ret = eval_if_stmt(env, &scope, v)
             case ^ast.Assignment_Stmt: eval_assignment_stmt(env, &scope, v)
             case ^ast.Index_Assignment_Stmt: eval_index_assignment_stmt(env, &scope, v)
+            case ^ast.Raw_Expr_Stmt: eval_raw_expr_stmt(env, &scope, v)
         }
 
         if ret != nil do break

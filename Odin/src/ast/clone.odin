@@ -67,7 +67,17 @@ clone_statement :: proc(s: ^Statement, allocator := context.allocator) -> ^State
         case ^If_Stmt: r^ = clone_if_stmt(v)
         case ^Assignment_Stmt: r^ = clone_assignment_stmt(v)
         case ^Index_Assignment_Stmt: r^ = clone_index_assignment_stmt(v)
+        case ^Raw_Expr_Stmt: r^ = clone_raw_expr_stmt(v)
     }
+
+    return r
+}
+
+clone_raw_expr_stmt :: proc(s: ^Raw_Expr_Stmt, allocator := context.allocator) -> ^Raw_Expr_Stmt {
+    context.allocator = allocator
+    
+    r := new(Raw_Expr_Stmt)
+    r.expr = s.expr
 
     return r
 }

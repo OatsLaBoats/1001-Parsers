@@ -18,7 +18,7 @@ import "interpreter"
 // TODO: Rename function_decl to def because its not a declaration
 // TODO: Rethink the lexer and parser error system maybe unify them all.
 // TODO: Use temp_allocator more
-// TODO: Use normal allocator instead of arena
+// TODO: Use normal allocator instead of arena for ast
 // TODO: Cleanup code and change to better variable names
 // TODO: Add builtin functions
 
@@ -136,5 +136,5 @@ main :: proc() {
     if only_compile do os.exit(0)
     
     err_code := interpreter.eval(&tree)
-    if err_code != 0 do fmt.println("Interpreter returned", err_code)
+    if err_code != 0 do os.exit(int(err_code))
 }

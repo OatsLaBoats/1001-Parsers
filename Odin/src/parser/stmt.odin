@@ -5,7 +5,6 @@ import "core:os"
 
 import "../ast"
 
-// TODO: Fix bug where raw expression are illegal
 @private
 parse_statement :: proc(parser: ^Parser) -> ^ast.Statement {
     result := new(ast.Statement)
@@ -20,15 +19,32 @@ parse_statement :: proc(parser: ^Parser) -> ^ast.Statement {
         result^ = parse_while_stmt(parser)
     } else if match(parser, .If) {
         result^ = parse_if_stmt(parser)
-    } else if match(parser, .Identifier) {
-        if peek(parser, 1).kind != .L_Bracket {
-            result^ = parse_assignment_stmt(parser)
-        } else {
-            result^ = parse_index_assignment_stmt(parser)
-        }
     } else {
-        fmt.println("Invalid statement", peek(parser))
-        os.exit(-1)
+        index := 0
+        is_assignment := false
+
+        for {
+            kind := peek(parser, index).kind
+            if kind == .Line_End || kind == .EOF do break
+            if kind == .Equal { 
+                is_assignment = true 
+                break
+            }
+
+            index += 1
+        }
+        
+        if is_assignment {
+            if match(parser, .Identifier) {
+                if peek(parser, 1).kind != .L_Bracket {
+                    result^ = parse_assignment_stmt(parser)
+                } else {
+                    result^ = parse_index_assignment_stmt(parser)
+                }
+            }
+        } else {
+            result^ = parse_raw_expr_stmt(parser)
+        }
     }
 
     return result
@@ -147,5 +163,13 @@ parse_var_decl_stmt :: proc(parser: ^Parser) -> ^ast.Variable_Decl_Stmt {
     result.var_type = var_type
     result.expr = expr
 
+    return result
+}
+
+@private
+parse_raw_expr_stmt :: proc(parser: ^Parser) -> ^ast.Raw_Expr_Stmt {
+    expr := parse_expression(parser)
+    result := new(ast.Raw_Expr_Stmt)
+    result.expr = expr
     return result
 }

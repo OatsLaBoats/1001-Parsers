@@ -44,6 +44,7 @@ Statement :: union {
     ^If_Stmt,
     ^Assignment_Stmt,
     ^Index_Assignment_Stmt,
+    ^Raw_Expr_Stmt,
 }
 
 Variable_Decl_Stmt :: struct {
@@ -88,6 +89,10 @@ Index_Assignment_Stmt :: struct {
     info: shared.Source_Info,
     id: string,
     index: ^Expression,
+    expr: ^Expression,
+}
+
+Raw_Expr_Stmt :: struct {
     expr: ^Expression,
 }
 

@@ -22,6 +22,11 @@ eval_print_stmt :: proc(env: ^Environment, scope: ^Scope, s: ^ast.Print_Stmt) {
 }
 
 @private
+eval_raw_expr_stmt :: proc(env: ^Environment, scope: ^Scope, s: ^ast.Raw_Expr_Stmt) {
+    eval_expression(env, scope, s.expr)
+}
+
+@private
 eval_while_stmt :: proc(env: ^Environment, scope: ^Scope, s: ^ast.While_Stmt) -> Value {
     condition := eval_expression(env, scope, s.cond).(Bool_Value)
     

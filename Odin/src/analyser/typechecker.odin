@@ -34,7 +34,13 @@ tc_statement :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Statement, func_id: 
         case ^ast.If_Stmt: tc_if_stmt(an, vars, s, func_id)
         case ^ast.Assignment_Stmt: tc_assignment_stmt(an, vars, s)
         case ^ast.Index_Assignment_Stmt: tc_index_assignment_stmt(an, vars, s)
+        case ^ast.Raw_Expr_Stmt: tc_raw_expr_stmt(an, vars, s)
     }
+}
+
+@private
+tc_raw_expr_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Raw_Expr_Stmt) {
+    tc_expression(an, vars, stmt.expr)
 }
 
 @private

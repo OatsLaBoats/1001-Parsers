@@ -69,8 +69,19 @@ print_block :: proc(block: ^Block, indent: int) {
             case ^If_Stmt: print_if_stmt(v, indent + 1)
             case ^Assignment_Stmt: print_assignment_stmt(v, indent + 1)
             case ^Index_Assignment_Stmt: print_index_assignment_stmt(v, indent + 1)
+            case ^Raw_Expr_Stmt: print_raw_expr_stmt(v, indent + 1)
         }
     }
+}
+
+@private
+print_raw_expr_stmt :: proc(stmt: ^Raw_Expr_Stmt, indent: int) {
+    print_indent(indent)
+    fmt.println("<Raw_Expr_Stmt>")
+    
+    print_indent(indent + 1)
+    fmt.println("expr:")
+    print_expr(stmt.expr, indent + 2)
 }
 
 @private

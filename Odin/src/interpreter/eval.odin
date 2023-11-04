@@ -8,8 +8,7 @@ import "../ast"
 
 Error_Code :: i64
 
-// TODO: Rename to Environment
-Interpreter :: struct {
+Environment :: struct {
     functions: map[string]^ast.Function_Decl
 }
 
@@ -55,7 +54,7 @@ Array_Value :: struct {
 }
 
 eval :: proc(tree: ^ast.Ast) -> Error_Code {
-    env := Interpreter {}
+    env := Environment {}
     env.functions = make(map[string]^ast.Function_Decl, allocator = context.temp_allocator)
     defer free_all(context.temp_allocator)
     
@@ -70,7 +69,7 @@ eval :: proc(tree: ^ast.Ast) -> Error_Code {
 }
 
 @private
-eval_function :: proc(env: ^Interpreter, f: ^ast.Function_Decl, params: Maybe([]Value)) -> Value {
+eval_function :: proc(env: ^Environment, f: ^ast.Function_Decl, params: Maybe([]Value)) -> Value {
     scope := Scope {}
     defer delete_scope(scope)
     
@@ -92,7 +91,7 @@ eval_function :: proc(env: ^Interpreter, f: ^ast.Function_Decl, params: Maybe([]
 
 // Returns non-nil if a return statement was called
 @private
-eval_block :: proc(env: ^Interpreter, parent: ^Scope, b: ^ast.Block) -> Value {
+eval_block :: proc(env: ^Environment, parent: ^Scope, b: ^ast.Block) -> Value {
     // TODO: Make this so we only create a scope when needed not when we enter a function
     scope := Scope { parent = parent }
     defer delete_scope(scope)
@@ -119,26 +118,26 @@ eval_block :: proc(env: ^Interpreter, parent: ^Scope, b: ^ast.Block) -> Value {
 }
 
 @private
-eval_variable_decl_stmt :: proc(env: ^Interpreter, scope: ^Scope, s: ^ast.Variable_Decl_Stmt) {
+eval_variable_decl_stmt :: proc(env: ^Environment, scope: ^Scope, s: ^ast.Variable_Decl_Stmt) {
     create_variable(scope, s.id, eval_expression(env, scope, s.expr))
 }
 
 // NOTE: There is a small bug with when a function returns its reference parameter. It will create two references in the array. 
 //       It still gets freed like normal but it takes a bit more memory in the array to store which I think is fine.
 @private
-eval_return_stmt :: proc(env: ^Interpreter, scope: ^Scope, s: ^ast.Return_Stmt) -> Value {
+eval_return_stmt :: proc(env: ^Environment, scope: ^Scope, s: ^ast.Return_Stmt) -> Value {
     res := eval_expression(env, scope, s.expr)
     increment_reference(res)
     return res
 }
 
 @private
-eval_print_stmt :: proc(env: ^Interpreter, scope: ^Scope, s: ^ast.Print_Stmt) {
+eval_print_stmt :: proc(env: ^Environment, scope: ^Scope, s: ^ast.Print_Stmt) {
     print_value(eval_expression(env, scope, s.expr))
 }
 
 @private
-eval_while_stmt :: proc(env: ^Interpreter, scope: ^Scope, s: ^ast.While_Stmt) -> Value {
+eval_while_stmt :: proc(env: ^Environment, scope: ^Scope, s: ^ast.While_Stmt) -> Value {
     condition := eval_expression(env, scope, s.cond).(Bool_Value)
     
     for condition.value {
@@ -152,7 +151,7 @@ eval_while_stmt :: proc(env: ^Interpreter, scope: ^Scope, s: ^ast.While_Stmt) ->
 }
 
 @private
-eval_if_stmt :: proc(env: ^Interpreter, scope: ^Scope, s: ^ast.If_Stmt) -> Value {
+eval_if_stmt :: proc(env: ^Environment, scope: ^Scope, s: ^ast.If_Stmt) -> Value {
     condition := eval_expression(env, scope, s.cond).(Bool_Value)
 
     if condition.value {
@@ -167,19 +166,19 @@ eval_if_stmt :: proc(env: ^Interpreter, scope: ^Scope, s: ^ast.If_Stmt) -> Value
 }
 
 @private
-eval_assignment_stmt :: proc(env: ^Interpreter, scope: ^Scope, s: ^ast.Assignment_Stmt) {
+eval_assignment_stmt :: proc(env: ^Environment, scope: ^Scope, s: ^ast.Assignment_Stmt) {
     set_variable(scope, s.id, eval_expression(env, scope, s.expr))
 }
 
 @private
-eval_index_assignment_stmt :: proc(env: ^Interpreter, scope: ^Scope, s: ^ast.Index_Assignment_Stmt) {
+eval_index_assignment_stmt :: proc(env: ^Environment, scope: ^Scope, s: ^ast.Index_Assignment_Stmt) {
     index := eval_expression(env, scope, s.index).(Int_Value)
     value := eval_expression(env, scope, s.expr)
     set_array_value(scope, s.id, index.value, value)
 }
 
 @private
-eval_expression :: proc(env: ^Interpreter, scope: ^Scope, e: ^ast.Expression, rc_start_state: int = 1) -> Value {
+eval_expression :: proc(env: ^Environment, scope: ^Scope, e: ^ast.Expression, rc_start_state: int = 1) -> Value {
     switch v in e {
         case ^ast.Primary_Expr: return eval_primary_expr(env, scope, v, rc_start_state)
         case ^ast.Binary_Expr: return eval_binary_expr(env, scope, v)
@@ -190,7 +189,7 @@ eval_expression :: proc(env: ^Interpreter, scope: ^Scope, e: ^ast.Expression, rc
 }
 
 @private
-eval_unary_expr :: proc(env: ^Interpreter, scope: ^Scope, e: ^ast.Unary_Expr) -> Value {
+eval_unary_expr :: proc(env: ^Environment, scope: ^Scope, e: ^ast.Unary_Expr) -> Value {
     switch e.op {
         case .Negation: {
             value := eval_expression(env, scope, e.expr)
@@ -210,7 +209,7 @@ eval_unary_expr :: proc(env: ^Interpreter, scope: ^Scope, e: ^ast.Unary_Expr) ->
 }
 
 @private
-eval_binary_expr :: proc(env: ^Interpreter, scope: ^Scope, e: ^ast.Binary_Expr) -> Value {
+eval_binary_expr :: proc(env: ^Environment, scope: ^Scope, e: ^ast.Binary_Expr) -> Value {
     #partial switch e.op {
         case .Or: {
             lhs := eval_expression(env, scope, e.lhs).(Bool_Value)
@@ -560,7 +559,7 @@ eval_binary_expr :: proc(env: ^Interpreter, scope: ^Scope, e: ^ast.Binary_Expr) 
 
 // rc_start_state is used when passing rc parameters to functions so the called function owns non variable objects
 @private
-eval_primary_expr :: proc(env: ^Interpreter, scope: ^Scope, e: ^ast.Primary_Expr, rc_start_state: int = 1) -> Value {
+eval_primary_expr :: proc(env: ^Environment, scope: ^Scope, e: ^ast.Primary_Expr, rc_start_state: int = 1) -> Value {
     switch v in e {
         case ast.Int_Lit: return Int_Value { v.value }
         case ast.Float_Lit: return Float_Value { v.value }

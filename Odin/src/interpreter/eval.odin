@@ -1,4 +1,3 @@
-// TODO: Break this into multiple files
 package interpreter
 
 import "core:strings"

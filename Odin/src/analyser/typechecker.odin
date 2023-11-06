@@ -365,8 +365,8 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Primary_Expr) -> 
                     for i in 0 ..< len(v.params) {
                         etype := tc_expression(an, vars, v.params[i])
                         if !ast.is_type_equal(etype, func.params[i].param_type) {
-                            append(&an.errors, make_error(v.info, "Type mismatch with with argument %s", i + 1))
-                        } 
+                            append(&an.errors, make_error(v.info, "Type mismatch with with argument %d", i + 1))
+                        }
                     }
                 }
 

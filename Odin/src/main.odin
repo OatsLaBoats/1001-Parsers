@@ -13,9 +13,7 @@ import "interpreter"
 
 // TODO: Make a repl
 // TODO: Make commandline options: select file, on/off token printer, on/off ast printer, on/off only compiling
-// TODO: Add structs using data keyword
 // TODO: Cleanup the ast to remove nil statements
-// TODO: Rename function_decl to def because its not a declaration
 // TODO: Rethink the lexer and parser error system maybe unify them all.
 // TODO: Use temp_allocator more
 // TODO: Use normal allocator instead of arena for ast

@@ -422,7 +422,6 @@ eval_primary_expr :: proc(env: ^Environment, scope: ^Scope, e: ^ast.Primary_Expr
             defer delete(params)
 
             for p in v.params {
-                // TODO: There may be a potential bug here if we pass a variable as a parameter
                 append(&params, eval_expression(env, scope, p, 0))
             }
             

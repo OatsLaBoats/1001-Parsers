@@ -11,9 +11,10 @@ Scope :: struct {
 }
 
 @private
-delete_scope :: proc(scope: Scope) {
+delete_scope :: proc(scope: ^Scope) {
     delete(scope.variables)
     delete(scope.references)
+    free(scope)
 }
 
 @private
@@ -22,7 +23,7 @@ drop_references :: proc(scope: ^Scope) {
         #partial switch var in v {
             case ^String_Value: {
                 var.rc -= 1
-                //fmt.println("decrementing reference", var.rc,":", strings.to_string(var.buf))
+                fmt.println("decrementing reference", var.rc,":", strings.to_string(var.buf))
                 if var.rc <= 0 {
                     //fmt.println("dropping string:", strings.to_string(var.buf))
                     strings.builder_destroy(&var.buf)
@@ -32,7 +33,7 @@ drop_references :: proc(scope: ^Scope) {
             
             case ^Array_Value: {
                 var.rc -= 1
-                //fmt.println("decrementing reference", var.rc,":", var.buf)
+                fmt.println("decrementing reference", var.rc,":", var.buf)
                 if var.rc <= 0 {
                     //fmt.println("dropping array:", var.buf)
                     delete(var.buf)
@@ -56,12 +57,12 @@ increment_reference :: proc(val: Value) {
     #partial switch v in val {
         case ^String_Value: {
             v.rc += 1
-            //fmt.println("Incremented reference of", v.rc,":", strings.to_string(v.buf))
+            fmt.println("Incremented reference of", v.rc,":", strings.to_string(v.buf))
         }
         
         case ^Array_Value: {
             v.rc += 1
-            //fmt.println("Incremented reference of", v.rc,":", v.buf)
+            fmt.println("Incremented reference of", v.rc,":", v.buf)
         }
     }
 }

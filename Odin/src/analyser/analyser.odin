@@ -33,9 +33,12 @@ delete_error_list :: proc(list: Error_List) {
 analyse :: proc(tree: ^ast.Ast, allocator := context.allocator) -> Error_List {
     context.allocator = allocator
 
-    an := Analyser {}
-    an.tree = tree
-    defer delete(an.functions)
+    an := Analyser {
+        errors = make(Error_List),
+        functions = make(map[string]^ast.Function, allocator=context.temp_allocator),
+        tree = tree,
+    }
+    defer free_all(context.temp_allocator)
 
     // Fill the function table
     collect_functions(&an)

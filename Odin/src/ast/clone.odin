@@ -1,29 +1,29 @@
 package ast
 
-// TODO: Clone source info
-
 clone :: proc(ast: ^Ast, allocator := context.allocator) -> Ast {
     context.allocator = allocator
 
     r := Ast {}
     
     for f in ast.functions {
-        append(&r.functions, clone_function_decl(f))
+        append(&r.functions, clone_function(f))
     }
 
     return r
 }
 
-clone_function_decl :: proc(f: ^Function, allocator := context.allocator) -> ^Function {
+clone_function :: proc(f: ^Function, allocator := context.allocator) -> ^Function {
     context.allocator = allocator
 
     r := new(Function)
+    r.info = f.info
     r.id = f.id
     r.return_type = f.return_type
     r.params = make([dynamic]^Function_Parameter)
 
     for p1 in f.params {
         p2 := new(Function_Parameter)
+        p2.info = p1.info
         p2.id = p1.id
         p2.param_type = p1.param_type
         append(&r.params, p2)
@@ -79,6 +79,7 @@ clone_index_assignment_stmt :: proc(s: ^Index_Assignment_Stmt, allocator := cont
     context.allocator = allocator
     
     r := new(Index_Assignment_Stmt)
+    r.info = s.info
     r.id = s.id
     r.index = clone_expression(s.index)
     r.expr = clone_expression(s.expr)
@@ -90,6 +91,7 @@ clone_assignment_stmt :: proc(s: ^Assignment_Stmt, allocator := context.allocato
     context.allocator = allocator
 
     r := new(Assignment_Stmt)
+    r.info = s.info
     r.id = s.id
     r.expr = clone_expression(s.expr)
     
@@ -100,6 +102,7 @@ clone_if_stmt :: proc(s: ^If_Stmt, allocator := context.allocator) -> ^If_Stmt {
     context.allocator = allocator
     
     r := new(If_Stmt)
+    r.info = s.info
     r.cond = clone_expression(s.cond)
     r.block = clone_block(s.block)
     r.elif_stmt = nil if s.elif_stmt == nil else clone_if_stmt(s.elif_stmt)
@@ -112,6 +115,7 @@ clone_while_stmt :: proc(s: ^While_Stmt, allocator := context.allocator) -> ^Whi
     context.allocator = allocator
     
     r := new(While_Stmt)
+    r.info = s.info
     r.cond = clone_expression(s.cond)
     r.block = clone_block(s.block)
 
@@ -131,6 +135,7 @@ clone_return_stmt :: proc(s: ^Return_Stmt, allocator := context.allocator) -> ^R
     context.allocator = allocator
 
     r := new(Return_Stmt)
+    r.info = s.info
     r.expr = clone_expression(s.expr)
 
     return r
@@ -140,6 +145,7 @@ clone_variable_decl_stmt :: proc(s: ^Variable_Decl_Stmt, allocator := context.al
     context.allocator = allocator
     
     r := new(Variable_Decl_Stmt)
+    r.info = s.info
     r.id = s.id
     r.var_type = s.var_type
     r.expr = clone_expression(s.expr)
@@ -165,6 +171,7 @@ clone_binary_expr :: proc(e: ^Binary_Expr, allocator := context.allocator) -> ^B
     context.allocator = allocator
 
     r := new(Binary_Expr)
+    r.info = e.info
     r.op = e.op
     r.lhs = clone_expression(e.lhs)
     r.rhs = clone_expression(e.rhs)
@@ -176,6 +183,7 @@ clone_unary_expr :: proc(e: ^Unary_Expr, allocator := context.allocator) -> ^Una
     context.allocator = allocator
     
     r := new(Unary_Expr)
+    r.info = e.info
     r.op = e.op
     r.expr = clone_expression(e.expr)
 
@@ -197,6 +205,7 @@ clone_primary_expr :: proc(e: ^Primary_Expr, allocator := context.allocator) -> 
 
         case ^Array_Lit: {
             lits := new(Array_Lit)
+            lits.info = v.info
 
             for lit in v.values {
                 append(&lits.values, clone_expression(lit))
@@ -207,6 +216,7 @@ clone_primary_expr :: proc(e: ^Primary_Expr, allocator := context.allocator) -> 
 
         case ^Function_Call: {
             fcall := new(Function_Call)
+            fcall.info = v.info
             fcall.id = v.id
             
             for param in v.params {

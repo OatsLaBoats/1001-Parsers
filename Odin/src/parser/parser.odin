@@ -24,8 +24,6 @@ Parser :: struct {
 }
 
 parse :: proc(tree: ^ast.Ast, tokens: []lx.Token) {
-    context.allocator = ast.get_arena(tree)
-
     parser := Parser {
         tokens = tokens,
     }

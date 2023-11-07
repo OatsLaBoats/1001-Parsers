@@ -2,17 +2,10 @@ package ast
 
 // TODO: Clone source info
 
-// You need to swap the arena and pass it in. Otherwise the previus tree will be overwriten
 clone :: proc(ast: ^Ast, allocator := context.allocator) -> Ast {
     context.allocator = allocator
 
-    r := Ast {
-        _arena1 = ast._arena1,
-        _arena2 = ast._arena2,
-        _arena_p = ast._arena_p,
-        _to_free = ast._to_free,
-        functions = make([dynamic]^Function),
-    }
+    r := Ast {}
     
     for f in ast.functions {
         append(&r.functions, clone_function_decl(f))

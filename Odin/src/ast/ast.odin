@@ -8,12 +8,6 @@ import "../shared"
 
 Ast :: struct {
     functions: [dynamic]^Function,
-
-    _arena1: ^vrt.Arena,
-    _arena2: ^vrt.Arena,
-    
-    _arena_p: ^vrt.Arena,
-    _to_free: ^vrt.Arena,
 }
 
 Function :: struct {
@@ -187,52 +181,4 @@ Function_Call :: struct {
     info: shared.Source_Info,
     id: string,
     params: [dynamic]^Expression,
-}
-
-swap_arena :: proc(ast: ^Ast) -> mem.Allocator {
-    if ast._to_free != nil {
-        free_all(vrt.arena_allocator(ast._to_free))
-    }
-
-    ast._to_free = ast._arena_p
-
-    if ast._arena_p == ast._arena1 {
-        ast._arena_p = ast._arena2
-    } else {
-        ast._arena_p = ast._arena1
-    }
-    
-    return vrt.arena_allocator(ast._arena_p)
-}
-
-get_arena :: proc(ast: ^Ast) -> mem.Allocator {
-    return vrt.arena_allocator(ast._arena_p)
-}
-
-init :: proc(ast: ^Ast, allocator := context.allocator) -> bool {
-    ast._arena1 = new(vrt.Arena, allocator)
-    ast._arena2 = new(vrt.Arena, allocator)
-
-    // Arenas use the page allocator of the os so we can't pass in the context
-    e1 := vrt.arena_init_growing(ast._arena1)
-    e2 := vrt.arena_init_growing(ast._arena2)
-    
-    if e1 == .Out_Of_Memory || e2 == .Out_Of_Memory {
-        return true
-    }
-
-    ast._arena_p = ast._arena1
-    ast._to_free = nil
-
-    ast.functions = make([dynamic]^Function, vrt.arena_allocator(ast._arena_p))
-
-    return false
-}
-
-destroy :: proc(ast: ^Ast) {
-    vrt.arena_destroy(ast._arena1)
-    vrt.arena_destroy(ast._arena2)
-    
-    free(ast._arena1)
-    free(ast._arena2)
 }

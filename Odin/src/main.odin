@@ -12,11 +12,8 @@ import "ast"
 import "interpreter"
 
 // TODO: Make a repl
-// TODO: Make commandline options: select file, on/off token printer, on/off ast printer, on/off only compiling
 // TODO: Cleanup the ast to remove nil statements
 // TODO: Rethink the lexer and parser error system maybe unify them all.
-// TODO: Use temp_allocator more
-// TODO: Use normal allocator instead of arena for ast
 // TODO: Cleanup code and change to better variable names
 // TODO: Add builtin functions
 
@@ -94,13 +91,8 @@ main :: proc() {
         os.exit(-1)
     }
 
-    tree: ast.Ast
-    err := ast.init(&tree)
-    defer ast.destroy(&tree)
-    if err {
-        fmt.println("Error: Out of memory")
-        os.exit(-1)
-    }
+    tree := ast.Ast {}
+    defer ast.delete_ast(&tree)
 
     parser.parse(&tree, lex.tokens[:])
     

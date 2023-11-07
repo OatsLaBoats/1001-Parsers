@@ -14,10 +14,6 @@ Array_Type :: struct {
     nesting: uint, // default is 1
 }
 
-User_Type :: struct {
-    fields: [dynamic]Type
-}
-
 BOOL_TYPE :: Base_Type { "Bool" }
 INT_TYPE :: Base_Type { "Int" }
 FLOAT_TYPE :: Base_Type { "Float" }

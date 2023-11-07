@@ -1,8 +1,7 @@
 package lexer
 
 import "core:fmt"
-
-// NOTE: Should probably swap to using Source_Info and unify the error types
+import "../shared"
 
 Token_Kind :: enum {
     // Keywords
@@ -37,8 +36,7 @@ Token_Kind :: enum {
 Token :: struct {
     kind: Token_Kind,
     lexeme: string,
-    line: int,
-    column: int,
+    info: shared.Source_Info,
 }
 
 LexerResult :: struct {
@@ -255,8 +253,7 @@ make_token :: proc(kind: Token_Kind, lexeme: string, line, column: int) -> Token
     return Token {
         kind = kind,
         lexeme = lexeme,
-        line = line,
-        column = column,
+        info = { line, column },
     }
 }
 

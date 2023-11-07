@@ -24,7 +24,7 @@ expect :: proc(parser: ^Parser, token_kind: lx.Token_Kind, error_message: string
     token := advance(parser)
 
     if token.kind != token_kind {
-        fmt.printf("Error [line:%d col:%d token:%s]: %s", token.line, token.column, token.lexeme, error_message)
+        fmt.printf("Error(%d:%d): %s", token.info.line, token.info.column, error_message)
         os.exit(-1)
     }
 
@@ -42,8 +42,7 @@ advance :: proc(parser: ^Parser) -> lx.Token {
         return lx.Token {
             kind = .EOF,
             lexeme = "",
-            line = -1,
-            column = -1,
+            info = {-1, -1},
         }
     }
 
@@ -57,8 +56,7 @@ peek :: proc(parser: ^Parser, ahead: int = 0) -> lx.Token {
         return lx.Token {
             kind = .EOF,
             lexeme = "", 
-            line = -1, 
-            column = -1,
+            info = {-1, -1},
         }
     }
 

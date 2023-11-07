@@ -7,7 +7,7 @@ eval_variable_decl_stmt :: proc(env: ^Environment, scope: ^Scope, s: ^ast.Variab
     create_variable(scope, s.id, eval_expression(env, scope, s.expr))
 }
 
-// NOTE: There is a small bug with when a function returns its reference parameter. It will create two references in the array. 
+// NOTE: There is a small bug with when a function returns its reference parameter. It will create two references in the scope. 
 //       It still gets freed like normal but it takes a bit more memory in the array to store which I think is fine.
 @private
 eval_return_stmt :: proc(env: ^Environment, scope: ^Scope, s: ^ast.Return_Stmt) -> Value {

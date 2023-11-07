@@ -3,7 +3,7 @@ package parser
 import "../ast"
 
 @private 
-parse_function_decl :: proc(parser: ^Parser) -> ^ast.Function {
+parse_function :: proc(parser: ^Parser) -> ^ast.Function {
     expect(parser, .Fun, "Expected 'fun' keyword.")
     id := expect(parser, .Identifier, "Expected identifier after 'fun' keyword.")
 
@@ -18,7 +18,7 @@ parse_function_decl :: proc(parser: ^Parser) -> ^ast.Function {
     block := parse_block(parser)
     
     result := new(ast.Function)
-    result.info = { id.line, id.column }
+    result.info = id.info
     result.id = id.lexeme
     result.return_type = return_type
     result.params = params
@@ -77,7 +77,7 @@ parse_parameter :: proc(parser: ^Parser) -> ^ast.Function_Parameter {
     param_type := parse_type_annotation(parser)
 
     result := new(ast.Function_Parameter)
-    result.info = { id.line, id.column }
+    result.info = id.info
     result.id = id.lexeme
     result.param_type = param_type
 

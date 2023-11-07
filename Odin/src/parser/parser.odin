@@ -36,7 +36,7 @@ parse :: proc(tree: ^ast.Ast, tokens: []lx.Token) {
 
         if is_at_end(&parser) { break }
 
-        f := parse_function_decl(&parser)
+        f := parse_function(&parser)
         append(&tree.functions, f) 
     }
 }

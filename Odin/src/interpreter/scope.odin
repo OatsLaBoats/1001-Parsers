@@ -4,6 +4,9 @@ import "core:fmt"
 import "core:strings"
 
 @private
+PRINT_DENUG_INFO :: false
+
+@private
 Scope :: struct {
     parent: ^Scope,
     variables: map[string]Value,
@@ -23,9 +26,11 @@ drop_references :: proc(scope: ^Scope) {
         #partial switch var in v {
             case ^String_Value: {
                 var.rc -= 1
-                fmt.println("decrementing reference", var.rc,":", strings.to_string(var.buf))
+                when PRINT_DENUG_INFO do fmt.println("decrementing reference", var.rc,":", strings.to_string(var.buf))
+
                 if var.rc <= 0 {
-                    //fmt.println("dropping string:", strings.to_string(var.buf))
+                    when PRINT_DENUG_INFO do fmt.println("dropping string:", strings.to_string(var.buf))
+                    
                     strings.builder_destroy(&var.buf)
                     free(var)
                 }
@@ -57,12 +62,12 @@ increment_reference :: proc(val: Value) {
     #partial switch v in val {
         case ^String_Value: {
             v.rc += 1
-            fmt.println("Incremented reference of", v.rc,":", strings.to_string(v.buf))
+            when PRINT_DENUG_INFO do fmt.println("Incremented reference of", v.rc,":", strings.to_string(v.buf))
         }
         
         case ^Array_Value: {
             v.rc += 1
-            fmt.println("Incremented reference of", v.rc,":", v.buf)
+            when PRINT_DENUG_INFO do fmt.println("Incremented reference of", v.rc,":", v.buf)
         }
     }
 }

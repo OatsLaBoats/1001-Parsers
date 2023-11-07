@@ -62,7 +62,7 @@ parse_index_assignment_stmt :: proc(parser: ^Parser) -> ^ast.Index_Assignment_St
     expr := parse_expression(parser)
     
     iastmt := new(ast.Index_Assignment_Stmt)
-    iastmt.info = { id.line, id.column }
+    iastmt.info = id.info
     iastmt.id = id.lexeme
     iastmt.index = idx
     iastmt.expr = expr
@@ -77,7 +77,7 @@ parse_assignment_stmt :: proc(parser: ^Parser) -> ^ast.Assignment_Stmt {
     expr := parse_expression(parser)
     
     astmt := new(ast.Assignment_Stmt)
-    astmt.info = { id.line, id.column }
+    astmt.info = id.info
     astmt.id = id.lexeme
     astmt.expr = expr
     
@@ -91,7 +91,7 @@ parse_if_stmt :: proc(parser: ^Parser) -> ^ast.If_Stmt {
     block := parse_block(parser)
 
     istmt := new(ast.If_Stmt)
-    istmt.info = { info.line, info.column }
+    istmt.info = info.info
     istmt.cond = cond
     istmt.block = block
     istmt.elif_stmt = nil
@@ -116,7 +116,7 @@ parse_while_stmt :: proc(parser: ^Parser) -> ^ast.While_Stmt {
     block := parse_block(parser)
     
     wstmt := new(ast.While_Stmt)
-    wstmt.info = { info.line, info.column }
+    wstmt.info = info.info
     wstmt.cond = cond
     wstmt.block = block
     
@@ -140,7 +140,7 @@ parse_return_stmt :: proc(parser: ^Parser) -> ^ast.Return_Stmt {
     expr := parse_expression(parser)
 
     rstmt := new(ast.Return_Stmt)
-    rstmt.info = { info.line, info.column }
+    rstmt.info = info.info
     rstmt.expr = expr
     
     return rstmt
@@ -158,7 +158,7 @@ parse_var_decl_stmt :: proc(parser: ^Parser) -> ^ast.Variable_Decl_Stmt {
     expr := parse_expression(parser)
     
     result := new(ast.Variable_Decl_Stmt)
-    result.info = { id.line, id.column }
+    result.info = id.info
     result.id = id.lexeme
     result.var_type = var_type
     result.expr = expr

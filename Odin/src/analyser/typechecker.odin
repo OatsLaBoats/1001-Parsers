@@ -1,7 +1,5 @@
 package analyser
 
-// TODO: Clean this up cause holy shit its a mess
-
 import "core:fmt"
 
 import "../ast"

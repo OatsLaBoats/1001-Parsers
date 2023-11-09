@@ -6,6 +6,7 @@ import "../ast"
 
 Vars :: map[string]ast.Type
 
+// TODO: Swap to using Var_Table
 @private
 typecheck :: proc(an: ^Analyser) {
     for _, f in an.functions {

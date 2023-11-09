@@ -9,8 +9,7 @@ Vars :: map[string]ast.Type
 @private
 typecheck :: proc(an: ^Analyser) {
     for _, f in an.functions {
-        vars := make(Vars)
-        defer delete(vars)
+        vars := make(Vars, allocator = context.temp_allocator)
         
         for p in f.params {
             vars[p.id] = p.param_type

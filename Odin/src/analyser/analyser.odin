@@ -35,10 +35,9 @@ analyse :: proc(tree: ^ast.Ast, allocator := context.allocator) -> Error_List {
 
     an := Analyser {
         errors = make(Error_List),
-        functions = make(map[string]^ast.Function, allocator=context.temp_allocator),
+        functions = make(map[string]^ast.Function, allocator = context.temp_allocator),
         tree = tree,
     }
-    defer free_all(context.temp_allocator)
 
     // Fill the function table
     collect_functions(&an)
@@ -46,9 +45,10 @@ analyse :: proc(tree: ^ast.Ast, allocator := context.allocator) -> Error_List {
     // Run analysers
     check_main(&an)
     duplicate_variable_check(&an)
-    check_missing_return(&an)
+    missing_return_check(&an)
     typecheck(&an)
     
+    free_all(context.allocator)
     return an.errors
 }
 
@@ -77,49 +77,6 @@ collect_functions :: proc(an: ^Analyser) {
             append(&an.errors, make_error(f.info, "Function '%s' is already defined", f.id))
         } else {
             an.functions[f.id] = f
-        }
-    }
-}
-
-@private
-duplicate_variable_check :: proc(an: ^Analyser) {
-    for f in an.tree.functions {
-        var_table := make(map[string]bool)
-        defer delete(var_table)
-
-        for p in f.params {
-            if p.id in var_table {
-                append(&an.errors, make_error(p.info, "Parameter '%s' is already defined", p.id))
-            } else {
-                var_table[p.id] = true
-            }
-        }
-
-        for s, i in f.block.stmts {
-            #partial switch v in s {
-                case ^ast.Variable_Decl_Stmt: {
-                    if v.id in var_table {
-                        f.block.stmts[i] = nil
-                        append(&an.errors, make_error(v.info, "Variable '%s' is already defined", v.id))
-                    } else {
-                        var_table[v.id] = true
-                    }
-                }
-
-                case ^ast.Assignment_Stmt: {
-                    if !(v.id in var_table) {
-                        f.block.stmts[i] = nil
-                        append(&an.errors, make_error(v.info, "Variable '%s' is not defined", v.id))
-                    }
-                }
-                
-                case ^ast.Index_Assignment_Stmt: {
-                    if !(v.id in var_table) {
-                        f.block.stmts[i] = nil
-                        append(&an.errors, make_error(v.info, "Variable '%s' is not defined", v.id))
-                    }
-                }
-            }
         }
     }
 }

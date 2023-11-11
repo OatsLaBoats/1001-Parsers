@@ -4,48 +4,45 @@ import "core:fmt"
 
 import "../ast"
 
-Vars :: map[string]ast.Type
-
-// TODO: Swap to using Var_Table
 @private
 typecheck :: proc(an: ^Analyser) {
     for _, f in an.functions {
-        vars := make(Vars, allocator = context.temp_allocator)
+        table := new_var_table()
         
         for p in f.params {
-            vars[p.id] = p.param_type
+            define_var(&table, p.id, p.param_type)
         }
 
         for s in f.block.stmts {
-            if s != nil do tc_statement(an, &vars, s, f.id)
+            if s != nil do tc_statement(an, &table, s, f.id)
         }
     }
 }
 
 @private
-tc_statement :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Statement, func_id: string) {
+tc_statement :: proc(an: ^Analyser, table: ^Var_Table, stmt: ^ast.Statement, func_id: string) {
     switch s in stmt {
-        case ^ast.Variable_Decl_Stmt: tc_variable_decl_stmt(an, vars, s)
-        case ^ast.Return_Stmt: tc_return_stmt(an, vars, s, func_id)
-        case ^ast.Print_Stmt: tc_print_stmt(an, vars, s)
-        case ^ast.While_Stmt: tc_while_stmt(an, vars, s, func_id)
-        case ^ast.If_Stmt: tc_if_stmt(an, vars, s, func_id)
-        case ^ast.Assignment_Stmt: tc_assignment_stmt(an, vars, s)
-        case ^ast.Index_Assignment_Stmt: tc_index_assignment_stmt(an, vars, s)
-        case ^ast.Raw_Expr_Stmt: tc_raw_expr_stmt(an, vars, s)
+        case ^ast.Variable_Decl_Stmt: tc_variable_decl_stmt(an, table, s)
+        case ^ast.Return_Stmt: tc_return_stmt(an, table, s, func_id)
+        case ^ast.Print_Stmt: tc_print_stmt(an, table, s)
+        case ^ast.While_Stmt: tc_while_stmt(an, table, s, func_id)
+        case ^ast.If_Stmt: tc_if_stmt(an, table, s, func_id)
+        case ^ast.Assignment_Stmt: tc_assignment_stmt(an, table, s)
+        case ^ast.Index_Assignment_Stmt: tc_index_assignment_stmt(an, table, s)
+        case ^ast.Raw_Expr_Stmt: tc_raw_expr_stmt(an, table, s)
     }
 }
 
 @private
-tc_raw_expr_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Raw_Expr_Stmt) {
-    tc_expression(an, vars, stmt.expr)
+tc_raw_expr_stmt :: proc(an: ^Analyser, table: ^Var_Table, stmt: ^ast.Raw_Expr_Stmt) {
+    tc_expression(an, table, stmt.expr)
 }
 
 @private
-tc_index_assignment_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Index_Assignment_Stmt) {
-    var := ast.get_array_type_internal(vars[stmt.id])
-    itype := tc_expression(an, vars, stmt.index)
-    etype := tc_expression(an, vars, stmt.expr)
+tc_index_assignment_stmt :: proc(an: ^Analyser, table: ^Var_Table, stmt: ^ast.Index_Assignment_Stmt) {
+    var := ast.get_array_type_internal(get_var(table, stmt.id))
+    itype := tc_expression(an, table, stmt.index)
+    etype := tc_expression(an, table, stmt.expr)
     
     if itype != nil && !ast.is_type_equal(itype, ast.INT_TYPE) {
         append(&an.errors, make_error(stmt.info, "Indexes can only be of type 'Int'"))
@@ -57,9 +54,9 @@ tc_index_assignment_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Index_As
 }
 
 @private
-tc_assignment_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Assignment_Stmt) {
-    var := vars[stmt.id]
-    etype := tc_expression(an, vars, stmt.expr)
+tc_assignment_stmt :: proc(an: ^Analyser, table: ^Var_Table, stmt: ^ast.Assignment_Stmt) {
+    var := get_var(table, stmt.id)
+    etype := tc_expression(an, table, stmt.expr)
     
     if etype != nil && !ast.is_type_equal(var, etype) {
         append(&an.errors, make_error(stmt.info, "Variable '%s' doesn't match the assignment expression type", stmt.id))
@@ -67,51 +64,54 @@ tc_assignment_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Assignment_Stm
 }
 
 @private
-tc_if_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.If_Stmt, func_id: string) {
-    etype := tc_expression(an, vars, stmt.cond)
+tc_if_stmt :: proc(an: ^Analyser, parent: ^Var_Table, stmt: ^ast.If_Stmt, func_id: string) {
+    etype := tc_expression(an, parent, stmt.cond)
     if etype != nil && !ast.is_type_equal(etype, ast.BOOL_TYPE) {
         append(&an.errors, make_error(stmt.info, "'if' conditional must be of type 'Bool'"))
     }
 
+    if_table := new_var_table(parent)
     for s in stmt.block.stmts {
-        if s != nil do tc_statement(an, vars, s, func_id)
+        if s != nil do tc_statement(an, &if_table, s, func_id)
     }
     
     if stmt.elif_stmt != nil {
-        tc_if_stmt(an, vars, stmt.elif_stmt, func_id)
+        tc_if_stmt(an, parent, stmt.elif_stmt, func_id)
     } else if stmt.else_block != nil {
+        else_table := new_var_table(parent)
         for s in stmt.else_block.stmts {
-            if s != nil do tc_statement(an, vars, s, func_id)
+            if s != nil do tc_statement(an, &else_table, s, func_id)
         }
     }
 }
 
 @private
-tc_while_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.While_Stmt, func_id: string) {
-    etype := tc_expression(an, vars, stmt.cond)
+tc_while_stmt :: proc(an: ^Analyser, parent: ^Var_Table, stmt: ^ast.While_Stmt, func_id: string) {
+    etype := tc_expression(an, parent, stmt.cond)
     if etype != nil && !ast.is_type_equal(etype, ast.BOOL_TYPE) {
         fmt.println(etype)
         append(&an.errors, make_error(stmt.info, "'while' conditional must be of type 'Bool'"))
     }
     
+    table := new_var_table(parent)
     for s in stmt.block.stmts {
-        if s != nil do tc_statement(an, vars, s, func_id)
+        if s != nil do tc_statement(an, &table, s, func_id)
     }
 }
 
 @private
-tc_print_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Print_Stmt) {
-    tc_expression(an, vars, stmt.expr)
+tc_print_stmt :: proc(an: ^Analyser, table: ^Var_Table, stmt: ^ast.Print_Stmt) {
+    tc_expression(an, table, stmt.expr)
 }
 
 @private
-tc_return_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt:  ^ast.Return_Stmt, func_id: string) {
+tc_return_stmt :: proc(an: ^Analyser, table: ^Var_Table, stmt:  ^ast.Return_Stmt, func_id: string) {
     func := an.functions[func_id]
 
     if func.return_type == nil {
         append(&an.errors, make_error(func.info, "Function '%s' shouldn't have a 'return' statment"))
     } else {
-        etype := tc_expression(an, vars, stmt.expr)
+        etype := tc_expression(an, table, stmt.expr)
         if etype != nil && !ast.is_type_equal(func.return_type, etype) {
             append(&an.errors, make_error(stmt.info, "'return' doesn't match the function '%s' return type", func.id))
         }
@@ -119,31 +119,31 @@ tc_return_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt:  ^ast.Return_Stmt, func
 }
 
 @private
-tc_variable_decl_stmt :: proc(an: ^Analyser, vars: ^Vars, stmt: ^ast.Variable_Decl_Stmt) {
-    vars[stmt.id] = stmt.var_type
-    
-    etype := tc_expression(an, vars, stmt.expr)
+tc_variable_decl_stmt :: proc(an: ^Analyser, table: ^Var_Table, stmt: ^ast.Variable_Decl_Stmt) {
+    etype := tc_expression(an, table, stmt.expr)
     
     if etype != nil && !ast.is_type_equal(etype, stmt.var_type) {
         append(&an.errors, make_error(stmt.info, "Variable '%s' doesn't match the assignment expression type", stmt.id))
     }
+
+    define_var(table, stmt.id, stmt.var_type)
 }
 
 @private
-tc_expression :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Expression) -> ast.Type {
+tc_expression :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Expression) -> ast.Type {
     switch e in expr {
-        case ^ast.Primary_Expr: return tc_primary_expr(an, vars, e)
-        case ^ast.Unary_Expr: return tc_unary_expr(an, vars, e)
-        case ^ast.Binary_Expr: return tc_binary_expr(an, vars, e)
+        case ^ast.Primary_Expr: return tc_primary_expr(an, table, e)
+        case ^ast.Unary_Expr: return tc_unary_expr(an, table, e)
+        case ^ast.Binary_Expr: return tc_binary_expr(an, table, e)
     }
     
     return nil
 }
 
 @private
-tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> ast.Type {
-    ltype := tc_expression(an, vars, expr.lhs)
-    rtype := tc_expression(an, vars, expr.rhs)
+tc_binary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Binary_Expr) -> ast.Type {
+    ltype := tc_expression(an, table, expr.lhs)
+    rtype := tc_expression(an, table, expr.rhs)
     
     if ltype == nil || rtype == nil do return nil
     
@@ -283,8 +283,8 @@ tc_binary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Binary_Expr) -> as
 }
 
 @private
-tc_unary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Unary_Expr) -> ast.Type {
-    etype := tc_expression(an, vars, expr.expr)
+tc_unary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Unary_Expr) -> ast.Type {
+    etype := tc_expression(an, table, expr.expr)
     if etype == nil do return nil
     
     if expr.op == .Negation {
@@ -303,7 +303,7 @@ tc_unary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Unary_Expr) -> ast.
 }
 
 @private
-tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Primary_Expr) -> ast.Type {
+tc_primary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Primary_Expr) -> ast.Type {
     switch v in expr {
         case ast.Int_Lit: return ast.INT_TYPE
         case ast.Float_Lit: return ast.FLOAT_TYPE
@@ -311,9 +311,8 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Primary_Expr) -> 
         case ast.Bool_Lit: return ast.BOOL_TYPE
         
         case ast.Identifier: {
-            if v.value in vars {
-                var := vars[v.value]
-                return var
+            if is_var_defined(table, v.value) {
+                return get_var(table, v.value)
             } else {
                 append(&an.errors, make_error(v.info, "Variable '%s' doesn't exist", v.value))
             }
@@ -326,7 +325,7 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Primary_Expr) -> 
             result.nesting = 1
 
             for e in v.values {
-                lit_type := tc_expression(an, vars, e)
+                lit_type := tc_expression(an, table, e)
 
                 if lit_type == nil do return nil
                 
@@ -351,7 +350,7 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Primary_Expr) -> 
             return result
         }
         
-        case ^ast.Expression: return tc_expression(an, vars, v)
+        case ^ast.Expression: return tc_expression(an, table, v)
 
         case ^ast.Function_Call: {
             if v.id in an.functions {
@@ -361,7 +360,7 @@ tc_primary_expr :: proc(an: ^Analyser, vars: ^Vars, expr: ^ast.Primary_Expr) -> 
                     append(&an.errors, make_error(v.info, "Too many arguments passed into function '%s'", v.id))
                 } else {
                     for i in 0 ..< len(v.params) {
-                        etype := tc_expression(an, vars, v.params[i])
+                        etype := tc_expression(an, table, v.params[i])
                         if !ast.is_type_equal(etype, func.params[i].param_type) {
                             append(&an.errors, make_error(v.info, "Type mismatch with with argument %d", i + 1))
                         }

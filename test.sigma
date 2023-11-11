@@ -68,7 +68,6 @@ fun main(): Int {
     if 1 == 1 {
         print "hello"
     } elif 1 < 0 {
-
     } else {
         print "bye"
     }

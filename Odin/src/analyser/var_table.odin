@@ -4,7 +4,7 @@ import "../ast"
 
 @private
 Var_Table :: struct {
-    vars: map[string]bool,
+    vars: map[string]ast.Type,
     parent: ^Var_Table,
 }
 
@@ -16,14 +16,24 @@ is_var_defined :: proc(table: ^Var_Table, id: string) -> bool {
 }
 
 @private
-define_var :: proc(table: ^Var_Table, id: string) {
-    table.vars[id] = true
+define_var :: proc(table: ^Var_Table, id: string, type: ast.Type = nil) {
+    table.vars[id] = type
+}
+
+@private
+get_var :: proc(table: ^Var_Table, id: string) -> ast.Type {
+    if id in table.vars {
+        return table.vars[id]
+    }
+    
+    if table.parent == nil do return nil
+    return get_var(table.parent, id)
 }
 
 @private
 new_var_table :: proc(parent: ^Var_Table = nil) -> Var_Table {
     return Var_Table {
-        vars = make(map[string]bool, allocator = context.temp_allocator),
+        vars = make(map[string]ast.Type, allocator = context.temp_allocator),
         parent = parent,
     }
 }

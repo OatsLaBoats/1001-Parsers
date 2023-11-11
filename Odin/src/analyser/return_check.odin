@@ -3,7 +3,6 @@ package analyser
 import "../ast"
 import "core:fmt"
 
-// TODO: Fix bug where an error is thrown if the return statement exists at the end of the function but not inside the if.
 @private
 missing_return_check :: proc(an: ^Analyser) {
     for _, f in an.functions {
@@ -21,7 +20,6 @@ mrc_block :: proc(an: ^Analyser, block: ^ast.Block) -> bool {
         #partial switch stmt in s {
             case ^ast.Return_Stmt: return true
             case ^ast.If_Stmt: if mrc_if_stmt(an, stmt) do return true
-            case ^ast.While_Stmt: return mrc_block(an, stmt.block)
         }
     }
     

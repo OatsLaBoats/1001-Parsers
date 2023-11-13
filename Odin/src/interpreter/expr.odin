@@ -417,7 +417,6 @@ eval_primary_expr :: proc(env: ^Environment, scope: ^Scope, e: ^ast.Primary_Expr
         case ^ast.Expression: return eval_expression(env, scope, v)
         
         case ^ast.Function_Call: {
-            func := env.functions[v.id]
             params := make([dynamic]Value)
             defer delete(params)
 
@@ -425,7 +424,7 @@ eval_primary_expr :: proc(env: ^Environment, scope: ^Scope, e: ^ast.Primary_Expr
                 append(&params, eval_expression(env, scope, p, 0))
             }
             
-            res := eval_function(env, func, params[:])
+            res := call(env, v.id, params[:])
             
             // Add the reference to the calling functions scope if it is a stiring or an array
             append_reference(scope, res)

@@ -19,6 +19,7 @@ Error :: struct {
 Analyser :: struct {
     errors: Error_List,
     functions: map[string]^ast.Function,
+    builtins: map[string]Builtin_Function,
     tree: ^ast.Ast,
 }
 
@@ -72,8 +73,10 @@ check_main :: proc(an: ^Analyser) {
 
 @private
 collect_functions :: proc(an: ^Analyser) {
+    get_builtins(&an.builtins)
+
     for f in an.tree.functions {
-        if f.id in an.functions {
+        if (f.id in an.functions) || (f.id in an.builtins) {
             append(&an.errors, make_error(f.info, "Function '%s' is already defined", f.id))
         } else {
             an.functions[f.id] = f

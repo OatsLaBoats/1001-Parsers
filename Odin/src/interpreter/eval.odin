@@ -9,20 +9,39 @@ Error_Code :: i64
 
 @private
 Environment :: struct {
-    functions: map[string]^ast.Function
+    functions: map[string]^ast.Function,
+    builtins: map[string]Builtin_Function
 }
 
-eval :: proc(tree: ^ast.Ast) -> Error_Code {
-    env := Environment {}
-    env.functions = make(map[string]^ast.Function, allocator = context.temp_allocator)
-    defer free_all(context.temp_allocator)
+@private
+setup_environment :: proc(tree: ^ast.Ast) -> Environment {
+    context.allocator = context.temp_allocator
+
+    env := Environment {
+        functions = make(map[string]^ast.Function),
+        builtins = make(map[string]Builtin_Function),
+    }
     
     for f in tree.functions {
         env.functions[f.id] = f
     }
-    
-    entry_point := env.functions["main"]
-    ret := eval_function(&env, entry_point, nil).(Int_Value)
 
+    get_builtins(&env.builtins)
+    
+    return env
+}
+
+eval :: proc(tree: ^ast.Ast) -> Error_Code {
+    env := setup_environment(tree)
+    defer free_all(context.temp_allocator)
+    
+    ret := call(&env, "main", nil).(Int_Value)
     return ret.value
+}
+
+@private
+call :: proc(env: ^Environment, id: string, params: Maybe([]Value)) -> Value {
+    if id in env.functions do return eval_function(env, env.functions[id], params)
+    if id in env.builtins do return env.builtins[id].callback(env, params)
+    return nil
 }

@@ -358,6 +358,8 @@ tc_primary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Primary_Exp
 
                 if len(v.params) > len(func.params) {
                     append(&an.errors, make_error(v.info, "Too many arguments passed into function '%s'", v.id))
+                } else if len(v.params) < len(func.params) {
+                    append(&an.errors, make_error(v.info, "Too few arguments passed into function '%s'", v.id))
                 } else {
                     for i in 0 ..< len(v.params) {
                         etype := tc_expression(an, table, v.params[i])
@@ -368,6 +370,24 @@ tc_primary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Primary_Exp
                 }
 
                 return func.return_type
+            } else if v.id in an.builtins {
+                func := an.builtins[v.id]
+
+                if len(v.params) > len(func.params) {
+                    append(&an.errors, make_error(v.info, "Too many arguments passed into function '%s'", v.id))
+                } else if len(v.params) < len(func.params) {
+                    append(&an.errors, make_error(v.info, "Too few arguments passed into function '%s'", v.id))
+                } else {
+                    for i in 0 ..< len(v.params) {
+                        etype := tc_expression(an, table, v.params[i])
+                        if !ast.is_type_equal(etype, func.params[i]) {
+                            append(&an.errors, make_error(v.info, "Type mismatch with with argument %d", i + 1))
+                        }
+                    }
+                }
+
+                return func.return_type
+
             } else {
                 append(&an.errors, make_error(v.info, "Function '%s' doesn't exist", v.id))
             }

@@ -11,11 +11,9 @@ import "analyser"
 import "ast"
 import "interpreter"
 
-// TODO: Make a repl
 // TODO: Cleanup the ast to remove nil statements
 // TODO: Rethink the lexer and parser error system maybe unify them all.
 // TODO: Cleanup code and change to better variable names
-// TODO: Add builtin functions
 
 main :: proc() {
     print_tokens := false

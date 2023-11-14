@@ -10,6 +10,7 @@ import "parser"
 import "analyser"
 import "ast"
 import "interpreter"
+import "optimizer"
 
 // TODO: Cleanup the ast to remove nil statements
 // TODO: Rethink the lexer and parser error system maybe unify them all.
@@ -94,16 +95,6 @@ main :: proc() {
 
     parser.parse(&tree, lex.tokens[:])
     
-    if print_tokens {
-        lexer.print_tokens(lex)
-        fmt.println()
-    }
-
-    if print_ast {
-        ast.print(&tree)
-        fmt.println()
-    }
-
     analyser_errors := analyser.analyse(&tree)
     defer analyser.delete_error_list(analyser_errors)
 
@@ -121,8 +112,22 @@ main :: proc() {
         os.exit(-1)
     }
     
-    if only_compile do os.exit(0)
-    
-    err_code := interpreter.eval(&tree)
-    if err_code != 0 do os.exit(int(err_code))
+    if optimise {
+        optimizer.tailcall_pass(&tree)
+    }
+
+    if print_tokens {
+        lexer.print_tokens(lex)
+        fmt.println()
+    }
+
+    if print_ast {
+        ast.print(&tree)
+        fmt.println()
+    }
+
+    if !only_compile {
+        err_code := interpreter.eval(&tree)
+        if err_code != 0 do os.exit(int(err_code))
+    }
 }

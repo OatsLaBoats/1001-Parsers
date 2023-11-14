@@ -182,3 +182,27 @@ Function_Call :: struct {
     id: string,
     params: [dynamic]^Expression,
 }
+
+is_return_stmt :: proc(stmt: ^Statement) -> bool {
+    #partial switch s in stmt {
+        case ^Return_Stmt: return true
+    }
+    
+    return false
+}
+
+is_primary_expr :: proc(expr: ^Expression) -> bool {
+    #partial switch e in expr {
+        case ^Primary_Expr: return true
+    }
+    
+    return false
+}
+
+is_function_call :: proc(expr: ^Primary_Expr) -> bool {
+    #partial switch e in expr {
+        case ^Function_Call: return true
+    }
+    
+    return false
+}

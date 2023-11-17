@@ -1,19 +1,19 @@
 
-# Odin review
+# Odin Thoughts
 
-Union bug that is quite annoying.
-https://github.com/odin-lang/Odin/issues/873
+This is not meant to a properly written review, if you want a proper opinion read the code.
 
-Having to deal with memory allocation is really annoying when dealing with data structures like trees, maps, lists and strings.
+## Negatives
 
-Writing the error systems is genuinely making me want to kms... I never realised how annoying string and datastructure manupulation
-was without managed memory
+- There  is a union bug that is quite annoying (closed though so maybe it is intended). <https://github.com/odin-lang/Odin/issues/873>
+- Having to deal with memory allocation is really annoying when dealing with data structures like trees, maps, lists and strings.
+- Some things are missing from the standard library. For example it would be nice to have a remove_elem function.
+- Code can get very verbose look at the interpreter for an example.
+- It's clearly not suitable at all for writing programming languages. Honestly even C is probably better at it.
+- Generics are a bit confusing.
 
-Some things are missing from the standard library
+## Positives
 
-code can get very verbose look at the interpreter for an example
-
-It is very clearly not suitable at all for writing programming languages. Honestly even raw C is probably better at it.
-It's pretty clear the intended usecase was game development of something similar.
-
-Can't figure out how to delete an element in a dynamic array so i was forced to recreate it every time
+- Seems pretty good for game dev.
+- Lots of nice included libraries like raylib.
+- Very easy to learn/read. If you know C it should take you like 40 minutes to start writing.

@@ -11,6 +11,7 @@ import "analyser"
 import "ast"
 import "interpreter"
 import "optimizer"
+import "shared"
 
 // TODO: Cleanup the ast to remove nil statements
 // TODO: Rethink the lexer and parser error system maybe unify them all.
@@ -78,15 +79,11 @@ main :: proc() {
     }
     
     source := string(contents)
-
     lex := lexer.scan(source)
     defer lexer.delete_lexer(lex)
     
     if len(lex.errors) > 0 {
-        for error in lex.errors {
-            fmt.printf("Error(%d:%d):", error.line, error.column, error)
-        }
-        
+        shared.print_error_list(&lex.errors)
         os.exit(-1)
     }
 
@@ -96,19 +93,10 @@ main :: proc() {
     parser.parse(&tree, lex.tokens[:])
     
     analyser_errors := analyser.analyse(&tree)
-    defer analyser.delete_error_list(analyser_errors)
+    defer shared.delete_error_list(analyser_errors)
 
     if len(analyser_errors) > 0 {
-        for e in analyser_errors {
-            if e.info.line == -1 {
-                fmt.printf("Error: %s\n", strings.to_string(e.msg))
-            } else if e.info.column == -1 {
-                fmt.printf("Error(%d): %s\n", e.info.line, strings.to_string(e.msg))
-            } else {
-                fmt.printf("Error(%d:%d): %s\n", e.info.line, e.info.column, strings.to_string(e.msg))
-            }
-        }       
-        
+        shared.print_error_list(&analyser_errors)
         os.exit(-1)
     }
     

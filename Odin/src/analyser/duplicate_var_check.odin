@@ -1,6 +1,7 @@
 package analyser
 
 import "../ast"
+import shr "../shared"
 
 @private
 duplicate_variable_check :: proc(an: ^Analyser) {
@@ -16,7 +17,7 @@ dvc_function :: proc(an: ^Analyser, f: ^ast.Function) {
 
     for p in f.params {
         if is_var_defined(&table, p.id) {
-            append(&an.errors, make_error(p.info, "Parameter '%s' is already defined", p.id))
+            shr.append_error(&an.errors, p.info, "Parameter '%s' is already defined", p.id)
             ast.delete_function_parameter(p)
         } else {
             define_var(&table, p.id)
@@ -39,7 +40,7 @@ dvc_block :: proc(an: ^Analyser, parent_table: ^Var_Table, b: ^ast.Block) {
         #partial switch v in s {
             case ^ast.Variable_Decl_Stmt: {
                 if is_var_defined(&table, v.id) {
-                    append(&an.errors, make_error(v.info, "Variable '%s' is already defined", v.id))
+                    shr.append_error(&an.errors, v.info, "Variable '%s' is already defined", v.id)
                     ast.delete_statement(s)
                 } else {
                     define_var(&table, v.id)
@@ -59,7 +60,7 @@ dvc_block :: proc(an: ^Analyser, parent_table: ^Var_Table, b: ^ast.Block) {
             
             case ^ast.Assignment_Stmt: {
                 if !is_var_defined(&table, v.id) {
-                    append(&an.errors, make_error(v.info, "Variable '%s' is undefined", v.id))
+                    shr.append_error(&an.errors, v.info, "Variable '%s' is undefined", v.id)
                     ast.delete_statement(s)
                 } else {
                     append(&new_stmt_list, s)
@@ -68,7 +69,7 @@ dvc_block :: proc(an: ^Analyser, parent_table: ^Var_Table, b: ^ast.Block) {
             
             case ^ast.Index_Assignment_Stmt: {
                 if !is_var_defined(&table, v.id) {
-                    append(&an.errors, make_error(v.info, "Variable '%s' is undefined", v.id))
+                    shr.append_error(&an.errors, v.info, "Variable '%s' is undefined", v.id)
                     ast.delete_statement(s)
                 } else {
                     append(&new_stmt_list, s)

@@ -39,53 +39,43 @@ Token :: struct {
     info: shared.Source_Info,
 }
 
-LexerResult :: struct {
+Lexer :: struct {
+    scanner: Scanner,
     tokens: [dynamic]Token,
-    errors: [dynamic]Error,
+    errors: shared.Error_List,
 }
 
-Error :: struct {
-    msg: string,
-    line: int, 
-    column: int,
-}
-
-Result :: union #no_nil {
-    Token,
-    Error,
-}
-
-print_tokens :: proc(lex: LexerResult) {
+print_tokens :: proc(lex: Lexer) {
     for t in lex.tokens {
         fmt.println(t)
     }
 }
 
-delete_lexer :: proc(lex: LexerResult, allocator := context.allocator) {
+delete_lexer :: proc(lex: Lexer, allocator := context.allocator) {
     context.allocator = allocator
     delete(lex.tokens)
-    delete(lex.errors)
+    shared.delete_error_list(lex.errors)
 }
 
-scan :: proc(source: string, allocator := context.allocator) -> LexerResult {
+scan :: proc(source: string, allocator := context.allocator) -> Lexer {
     context.allocator = allocator
 
-    scanner := make_scanner(source)
-    lex := LexerResult {}
+    lex := Lexer {
+        scanner = make_scanner(source),
+    }
 
-    for !is_at_end(&scanner) {
-        res := scan_token(&scanner)
-        switch v in res {
-            case Token: append(&lex.tokens, v)
-            case Error: append(&lex.errors, v)
-        }
+    for !is_at_end(&lex.scanner) {
+        res := scan_token(&lex)
+        if res != nil do append(&lex.tokens, res.(Token))
     }
 
     return lex
 }
 
 @private
-scan_token :: proc(scanner: ^Scanner) -> Result {
+scan_token :: proc(lex: ^Lexer) -> Maybe(Token) {
+    scanner := &lex.scanner
+
     skip_whitespace(scanner)
 
     // Advance the start of the token
@@ -113,23 +103,25 @@ scan_token :: proc(scanner: ^Scanner) -> Result {
         case ',': return make_simple_token(.Comma, line, column)
 
         case '=': return scan_equal(scanner, line, column)
-        case '!': return scan_bang(scanner, line, column)
+        case '!': return scan_bang(lex, line, column)
         case '>': return scan_greater_than(scanner, line, column)
         case '<': return scan_less_than(scanner, line, column)
         
-        case '"': return scan_string(scanner, line, column)
+        case '"': return scan_string(lex, line, column)
 
         case 'a'..='z', 'A'..='Z', '_': return scan_word(scanner, line, column)
-        case '0'..='9': return scan_digit(scanner, line, column)
+        case '0'..='9': return scan_digit(lex, line, column)
 
         case '\n': return make_simple_token(.Line_End, line - 1, column)
     }
 
-    return Error { "Unexpected character", line, column }
+    shared.append_error(&lex.errors, shared.Source_Info { line, column }, "Unexpected character")
+    return nil
 }
 
 @private
-scan_string :: proc(scanner: ^Scanner, line, column: int) -> Result {
+scan_string :: proc(lex: ^Lexer, line, column: int) -> Maybe(Token) {
+    scanner := &lex.scanner
     for {
         ch := peek(scanner)
 
@@ -141,42 +133,50 @@ scan_string :: proc(scanner: ^Scanner, line, column: int) -> Result {
                 return make_token(.String_Lit, lexeme, line, column)
             }
             
-            case '\n', EOF: return Error { "String isn't closed", line, column }
+            case '\n', EOF: {
+                shared.append_error(&lex.errors, shared.Source_Info { line, column }, "String literal not closed")
+                return nil
+            }
         }
 
         advance(scanner)
     }
+
+    return nil
 }
 
 @private
-scan_less_than :: proc(scanner: ^Scanner, line, column: int) -> Result {
+scan_less_than :: proc(scanner: ^Scanner, line, column: int) -> Token {
     kind := match(scanner, '=') ? Token_Kind.Lt_Eq : Token_Kind.Lt
     return make_simple_token(kind, line, column)
 }
 
 @private
-scan_greater_than :: proc(scanner: ^Scanner, line, column: int) -> Result {
+scan_greater_than :: proc(scanner: ^Scanner, line, column: int) -> Token {
     kind := match(scanner, '=') ? Token_Kind.Gt_Eq : Token_Kind.Gt
     return make_simple_token(kind, line, column)
 }
 
 @private
-scan_bang :: proc(scanner: ^Scanner, line, column: int) -> Result {
+scan_bang :: proc(lex: ^Lexer, line, column: int) -> Maybe(Token) {
+    scanner := &lex.scanner
     if match(scanner, '=') {
         return make_simple_token(.Neq, line, column)
     }
 
-    return Error { "Incomplete '!=' operator", line, column }
+    shared.append_error(&lex.errors, shared.Source_Info { line, column }, "Incomplete '!=' operator")
+    return nil
 }
 
 @private
-scan_equal :: proc(scanner: ^Scanner, line, column: int) -> Result {
+scan_equal :: proc(scanner: ^Scanner, line, column: int) -> Token {
     kind := match(scanner, '=') ? Token_Kind.Eq : Token_Kind.Equal
     return make_simple_token(kind, line, column)
 }
 
 @private
-scan_digit :: proc(scanner: ^Scanner, line, column: int) -> Result {
+scan_digit :: proc(lex: ^Lexer, line, column: int) -> Maybe(Token) {
+    scanner := &lex.scanner
     for is_digit(peek(scanner)) {
         advance(scanner)
     }
@@ -187,9 +187,9 @@ scan_digit :: proc(scanner: ^Scanner, line, column: int) -> Result {
             for is_digit(peek(scanner)) {
                 advance(scanner)
             }
-        }
-        else {
-            return Error { "Invalid float syntax.", line, column }
+        } else {
+            shared.append_error(&lex.errors, shared.Source_Info { line, column }, "Invalid float syntax")
+            return nil
         }
     }
 
@@ -198,7 +198,7 @@ scan_digit :: proc(scanner: ^Scanner, line, column: int) -> Result {
 }
 
 @private
-scan_word :: proc(scanner: ^Scanner, line, column: int) -> Result {
+scan_word :: proc(scanner: ^Scanner, line, column: int) -> Token {
     for is_alpha(peek(scanner)) || is_digit(peek(scanner)) {
         advance(scanner)
     }

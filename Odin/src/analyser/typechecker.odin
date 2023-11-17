@@ -3,6 +3,7 @@ package analyser
 import "core:fmt"
 
 import "../ast"
+import s "../shared"
 
 @private
 typecheck :: proc(an: ^Analyser) {
@@ -45,11 +46,11 @@ tc_index_assignment_stmt :: proc(an: ^Analyser, table: ^Var_Table, stmt: ^ast.In
     etype := tc_expression(an, table, stmt.expr)
     
     if itype != nil && !ast.is_type_equal(itype, ast.INT_TYPE) {
-        append(&an.errors, make_error(stmt.info, "Indexes can only be of type 'Int'"))
+        s.append_error(&an.errors, stmt.info, "Indexes can only be of type 'Int'")
     }
 
     if etype != nil && !ast.is_type_equal(etype, var) {
-        append(&an.errors, make_error(stmt.info, "Variable '%s' doesn't match the assignment expression type", stmt.id))
+        s.append_error(&an.errors, stmt.info, "Variable '%s' doesn't match the assignment expression type", stmt.id)
     }
 }
 
@@ -59,7 +60,7 @@ tc_assignment_stmt :: proc(an: ^Analyser, table: ^Var_Table, stmt: ^ast.Assignme
     etype := tc_expression(an, table, stmt.expr)
     
     if etype != nil && !ast.is_type_equal(var, etype) {
-        append(&an.errors, make_error(stmt.info, "Variable '%s' doesn't match the assignment expression type", stmt.id))
+        s.append_error(&an.errors, stmt.info, "Variable '%s' doesn't match the assignment expression type", stmt.id)
     }
 }
 
@@ -67,7 +68,7 @@ tc_assignment_stmt :: proc(an: ^Analyser, table: ^Var_Table, stmt: ^ast.Assignme
 tc_if_stmt :: proc(an: ^Analyser, parent: ^Var_Table, stmt: ^ast.If_Stmt, func_id: string) {
     etype := tc_expression(an, parent, stmt.cond)
     if etype != nil && !ast.is_type_equal(etype, ast.BOOL_TYPE) {
-        append(&an.errors, make_error(stmt.info, "'if' conditional must be of type 'Bool'"))
+        s.append_error(&an.errors, stmt.info, "'if' conditional must be of type 'Bool'")
     }
 
     if_table := new_var_table(parent)
@@ -90,7 +91,7 @@ tc_while_stmt :: proc(an: ^Analyser, parent: ^Var_Table, stmt: ^ast.While_Stmt, 
     etype := tc_expression(an, parent, stmt.cond)
     if etype != nil && !ast.is_type_equal(etype, ast.BOOL_TYPE) {
         fmt.println(etype)
-        append(&an.errors, make_error(stmt.info, "'while' conditional must be of type 'Bool'"))
+        s.append_error(&an.errors, stmt.info, "'while' conditional must be of type 'Bool'")
     }
     
     table := new_var_table(parent)
@@ -109,11 +110,11 @@ tc_return_stmt :: proc(an: ^Analyser, table: ^Var_Table, stmt:  ^ast.Return_Stmt
     func := an.functions[func_id]
 
     if func.return_type == nil {
-        append(&an.errors, make_error(func.info, "Function '%s' shouldn't have a 'return' statment"))
+        s.append_error(&an.errors, func.info, "Function '%s' shouldn't have a 'return' statment")
     } else {
         etype := tc_expression(an, table, stmt.expr)
         if etype != nil && !ast.is_type_equal(func.return_type, etype) {
-            append(&an.errors, make_error(stmt.info, "'return' doesn't match the function '%s' return type", func.id))
+            s.append_error(&an.errors, stmt.info, "'return' doesn't match the function '%s' return type", func.id)
         }
     }        
 }
@@ -123,7 +124,7 @@ tc_variable_decl_stmt :: proc(an: ^Analyser, table: ^Var_Table, stmt: ^ast.Varia
     etype := tc_expression(an, table, stmt.expr)
     
     if etype != nil && !ast.is_type_equal(etype, stmt.var_type) {
-        append(&an.errors, make_error(stmt.info, "Variable '%s' doesn't match the assignment expression type", stmt.id))
+        s.append_error(&an.errors, stmt.info, "Variable '%s' doesn't match the assignment expression type", stmt.id)
     }
 
     define_var(table, stmt.id, stmt.var_type)
@@ -154,7 +155,7 @@ tc_binary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Binary_Expr)
             
             if !b1 || !b2 {
                 op := "or" if expr.op == .Or else "and"
-                append(&an.errors, make_error(expr.info, "'%s' requires operands of type 'Bool'", op))
+                s.append_error(&an.errors, expr.info, "'%s' requires operands of type 'Bool'", op)
             } else {
                 return ast.BOOL_TYPE
             }
@@ -176,7 +177,7 @@ tc_binary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Binary_Expr)
                 return ast.BOOL_TYPE
             } else {
                 op := "==" if expr.op == .Eq else "!="
-                append(&an.errors, make_error(expr.info, "'%s' requires operands of the same type", op))
+                s.append_error(&an.errors, expr.info, "'%s' requires operands of the same type", op)
             }
         }
 
@@ -196,7 +197,7 @@ tc_binary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Binary_Expr)
                 else if expr.op == .Gt_Eq do op = ">="
                 else if expr.op == .Lt_Eq do op = "<="
                 
-                append(&an.errors, make_error(expr.info, "'%s' requires operands either of type 'Float' or 'Int'", op))
+                s.append_error(&an.errors, expr.info, "'%s' requires operands either of type 'Float' or 'Int'", op)
             } else {
                 return ast.BOOL_TYPE
             }
@@ -217,7 +218,7 @@ tc_binary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Binary_Expr)
                 if expr.op == .Mul do op = "*"
                 else if expr.op == .Div do op = "/"
 
-                append(&an.errors, make_error(expr.info, "'%s' requires operands either of type 'Float' or 'Int'", op))
+                s.append_error(&an.errors, expr.info, "'%s' requires operands either of type 'Float' or 'Int'", op)
             } else {
                 if f1 || f2 {
                     return ast.FLOAT_TYPE
@@ -231,7 +232,7 @@ tc_binary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Binary_Expr)
             if ast.is_type_equal(ltype, ast.INT_TYPE) && ast.is_type_equal(rtype, ast.INT_TYPE) {
                 return ast.INT_TYPE
             } else {
-                append(&an.errors, make_error(expr.info, "'%%' requires operands of type 'Int'"))
+                s.append_error(&an.errors, expr.info, "'%%' requires operands of type 'Int'")
             }
         }
 
@@ -250,9 +251,9 @@ tc_binary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Binary_Expr)
                     return ast.STRING_TYPE
                 } else {
                     if !ast.is_array_type(ltype) && !ast.is_array_type(rtype) {
-                        append(&an.errors, make_error(expr.info, "'+' requires operands of type 'String', 'Array', 'Int' or 'Float'"))
+                        s.append_error(&an.errors, expr.info, "'+' requires operands of type 'String', 'Array', 'Int' or 'Float'")
                     } else if !ast.is_type_equal(ltype, rtype) {
-                        append(&an.errors, make_error(expr.info, "Arrays contain different types"))
+                        s.append_error(&an.errors, expr.info, "Arrays contain different types")
                     } else {
                         return ltype
                     }
@@ -271,10 +272,10 @@ tc_binary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Binary_Expr)
                 if ast.is_type_equal(rtype, ast.INT_TYPE) {
                     return ast.get_array_type_internal(ltype)
                 } else {
-                    append(&an.errors, make_error(expr.info, "Index must be of type 'Int'"))
+                    s.append_error(&an.errors, expr.info, "Index must be of type 'Int'")
                 }
             } else {
-                append(&an.errors, make_error(expr.info, "Attempt to index data that is not an array"))
+                s.append_error(&an.errors, expr.info, "Attempt to index data that is not an array")
             }
         }
     }
@@ -289,12 +290,12 @@ tc_unary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Unary_Expr) -
     
     if expr.op == .Negation {
         if !ast.is_type_equal(etype, ast.INT_TYPE) && !ast.is_type_equal(etype, ast.FLOAT_TYPE) {
-            append(&an.errors, make_error(expr.info, "'-' requires both operands to be of type 'Float' or 'Int'"))
+            s.append_error(&an.errors, expr.info, "'-' requires both operands to be of type 'Float' or 'Int'")
             return nil
         }
     } else {
         if !ast.is_type_equal(etype, ast.BOOL_TYPE) {
-            append(&an.errors, make_error(expr.info, "'not' requires both operands to be of type 'Bool'"))
+            s.append_error(&an.errors, expr.info, "'not' requires both operands to be of type 'Bool'")
             return nil
         }
     }
@@ -314,7 +315,7 @@ tc_primary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Primary_Exp
             if is_var_defined(table, v.value) {
                 return get_var(table, v.value)
             } else {
-                append(&an.errors, make_error(v.info, "Variable '%s' doesn't exist", v.value))
+                s.append_error(&an.errors, v.info, "Variable '%s' doesn't exist", v.value)
             }
         }
         
@@ -342,7 +343,7 @@ tc_primary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Primary_Exp
                 }
                 
                 if !ast.is_type_equal(first_type, lit_type) {
-                    append(&an.errors, make_error(v.info, "Multiple different types in array literal"))
+                    s.append_error(&an.errors, v.info, "Multiple different types in array literal")
                     return nil
                 }
             }
@@ -357,14 +358,14 @@ tc_primary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Primary_Exp
                 func := an.functions[v.id]
 
                 if len(v.params) > len(func.params) {
-                    append(&an.errors, make_error(v.info, "Too many arguments passed into function '%s'", v.id))
+                    s.append_error(&an.errors, v.info, "Too many arguments passed into function '%s'", v.id)
                 } else if len(v.params) < len(func.params) {
-                    append(&an.errors, make_error(v.info, "Too few arguments passed into function '%s'", v.id))
+                    s.append_error(&an.errors, v.info, "Too few arguments passed into function '%s'", v.id)
                 } else {
                     for i in 0 ..< len(v.params) {
                         etype := tc_expression(an, table, v.params[i])
                         if !ast.is_type_equal(etype, func.params[i].param_type) {
-                            append(&an.errors, make_error(v.info, "Type mismatch with with argument %d", i + 1))
+                            s.append_error(&an.errors, v.info, "Type mismatch with with argument %d", i + 1)
                         }
                     }
                 }
@@ -374,14 +375,14 @@ tc_primary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Primary_Exp
                 func := an.builtins[v.id]
 
                 if len(v.params) > len(func.params) {
-                    append(&an.errors, make_error(v.info, "Too many arguments passed into function '%s'", v.id))
+                    s.append_error(&an.errors, v.info, "Too many arguments passed into function '%s'", v.id)
                 } else if len(v.params) < len(func.params) {
-                    append(&an.errors, make_error(v.info, "Too few arguments passed into function '%s'", v.id))
+                    s.append_error(&an.errors, v.info, "Too few arguments passed into function '%s'", v.id)
                 } else {
                     for i in 0 ..< len(v.params) {
                         etype := tc_expression(an, table, v.params[i])
                         if !ast.is_type_equal(etype, func.params[i]) {
-                            append(&an.errors, make_error(v.info, "Type mismatch with with argument %d", i + 1))
+                            s.append_error(&an.errors, v.info, "Type mismatch with with argument %d", i + 1)
                         }
                     }
                 }
@@ -389,7 +390,7 @@ tc_primary_expr :: proc(an: ^Analyser, table: ^Var_Table, expr: ^ast.Primary_Exp
                 return func.return_type
 
             } else {
-                append(&an.errors, make_error(v.info, "Function '%s' doesn't exist", v.id))
+                s.append_error(&an.errors, v.info, "Function '%s' doesn't exist", v.id)
             }
         }
     }

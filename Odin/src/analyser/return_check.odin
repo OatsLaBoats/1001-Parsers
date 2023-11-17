@@ -1,6 +1,7 @@
 package analyser
 
 import "../ast"
+import "../shared"
 import "core:fmt"
 
 @private
@@ -8,7 +9,7 @@ missing_return_check :: proc(an: ^Analyser) {
     for _, f in an.functions {
         if f.return_type != nil {
             if !mrc_block(an, f.block) {
-                append(&an.errors, make_error(f.info, "Function \"%s\" is missing a 'return' statement", f.id))
+                shared.append_error(&an.errors, f.info, "Function \"%s\" is missing a 'return' statement", f.id)
             }
         }
     }

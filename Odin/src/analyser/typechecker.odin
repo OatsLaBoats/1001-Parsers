@@ -15,7 +15,7 @@ typecheck :: proc(an: ^Analyser) {
         }
 
         for s in f.block.stmts {
-            if s != nil do tc_statement(an, &table, s, f.id)
+            tc_statement(an, &table, s, f.id)
         }
     }
 }
@@ -73,7 +73,7 @@ tc_if_stmt :: proc(an: ^Analyser, parent: ^Var_Table, stmt: ^ast.If_Stmt, func_i
 
     if_table := new_var_table(parent)
     for s in stmt.block.stmts {
-        if s != nil do tc_statement(an, &if_table, s, func_id)
+        tc_statement(an, &if_table, s, func_id)
     }
     
     if stmt.elif_stmt != nil {
@@ -81,7 +81,7 @@ tc_if_stmt :: proc(an: ^Analyser, parent: ^Var_Table, stmt: ^ast.If_Stmt, func_i
     } else if stmt.else_block != nil {
         else_table := new_var_table(parent)
         for s in stmt.else_block.stmts {
-            if s != nil do tc_statement(an, &else_table, s, func_id)
+            tc_statement(an, &else_table, s, func_id)
         }
     }
 }
@@ -96,7 +96,7 @@ tc_while_stmt :: proc(an: ^Analyser, parent: ^Var_Table, stmt: ^ast.While_Stmt, 
     
     table := new_var_table(parent)
     for s in stmt.block.stmts {
-        if s != nil do tc_statement(an, &table, s, func_id)
+        tc_statement(an, &table, s, func_id)
     }
 }
 

@@ -13,10 +13,6 @@ import "interpreter"
 import "optimizer"
 import "shared"
 
-// TODO: Cleanup the ast to remove nil statements
-// TODO: Rethink the lexer and parser error system maybe unify them all.
-// TODO: Cleanup code and change to better variable names
-
 main :: proc() {
     print_tokens := false
     print_ast := false

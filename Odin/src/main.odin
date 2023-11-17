@@ -18,7 +18,7 @@ main :: proc() {
     print_ast := false
     optimise := false
     only_compile := false
-    filename := "../a.sigma"
+    filename := ""
 
     for arg in os.args[1:] {
         switch arg {

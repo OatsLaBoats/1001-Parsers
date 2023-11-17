@@ -1,7 +1,8 @@
 
 # Odin Thoughts
 
-This is not meant to a properly written review, if you want a proper opinion read the code.
+This is not meant to be a properly written review, if you want a proper opinion read the code.
+P.S: I'm just a hobbyist this is not a proffesional opinion.
 
 ## Negatives
 

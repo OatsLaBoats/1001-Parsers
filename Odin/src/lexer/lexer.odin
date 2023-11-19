@@ -174,6 +174,7 @@ scan_equal :: proc(scanner: ^Scanner, line, column: int) -> Token {
     return make_simple_token(kind, line, column)
 }
 
+// TODO: Catch error where identifiers begin with numbers
 @private
 scan_digit :: proc(lex: ^Lexer, line, column: int) -> Maybe(Token) {
     scanner := &lex.scanner

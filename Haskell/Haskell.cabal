@@ -11,7 +11,7 @@ cabal-version:      3.4
 --   http://haskell.org/cabal/users-guide/
 --
 -- The name of the package.
-name:               Haskell
+name: Haskell
 
 -- The package version.
 -- See the Haskell package versioning policy (PVP) for standards
@@ -29,17 +29,17 @@ version:            0.1.0.0
 -- description:
 
 -- The license under which the package is released.
-license:            NONE
+license: NONE
 
 -- The package author(s).
-author:             Boats
+author: Boats
 
 -- An email address to which users can send suggestions, bug reports, and patches.
-maintainer:         48214938+OatsLaBoats@users.noreply.github.com
+maintainer: 48214938+OatsLaBoats@users.noreply.github.com
 
 -- A copyright notice.
 -- copyright:
-build-type:         Simple
+build-type: Simple
 
 -- Extra doc files to be distributed with the package, such as a CHANGELOG or a README.
 -- extra-doc-files:    CHANGELOG.md
@@ -52,13 +52,14 @@ common warnings
 
 executable Haskell
     -- Import common warning flags.
-    import:           warnings
+    import: warnings
 
     -- .hs or .lhs file containing the Main module.
-    main-is:          Main.hs
+    main-is: Main.hs
 
     -- Modules included in this executable, other than Main.
-    -- other-modules:
+    other-modules:
+        Lexer
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -69,7 +70,7 @@ executable Haskell
         directory ^>=1.3.8.1
 
     -- Directories containing source files.
-    hs-source-dirs:   src
+    hs-source-dirs: src
 
     -- Base language which the package is written in.
     default-language: GHC2021

@@ -80,7 +80,7 @@ scanTokens s src = case src of
     ('#' : rest)  -> skipLine s rest
     
     ('\n' : rest) -> 
-        scanTokens s { getTokens = ((TkLineEnd location) : tokens), getLocation = (line + 1, 1)} rest
+        scanTokens s { getTokens = (TkLineEnd location) : tokens, getLocation = (line + 1, 1)} rest
 
     ('+' : rest) -> simpleToken (TkPlus location) rest
     ('-' : rest) -> simpleToken (TkMinus location) rest
@@ -111,7 +111,6 @@ scanTokens s src = case src of
     
     ('"' : rest) -> scanString s { getLocation = (line, column + 1) } rest
     
-    -- TODO: Fix bug with having the incorrect location in the token
     (c : rest)
         | isDigit c               -> scanNumber s src
         | isIdentifierStartChar c -> scanIdentifier s src
@@ -144,14 +143,14 @@ skipLine s src = case src of
         (line, column) = getLocation s
 
 scanIdentifier :: LexerState -> Source -> LexerState
-scanIdentifier s src = scanIdentifier_ s src ""
+scanIdentifier s src = scanIdentifier_ s src "" (getLocation s)
 
-scanIdentifier_ :: LexerState -> Source -> String -> LexerState
-scanIdentifier_ s src ident = case src of
+scanIdentifier_ :: LexerState -> Source -> String -> Location -> LexerState
+scanIdentifier_ s src ident startLoc = case src of
     [] -> makeToken
     (c : rest)
-        | isIdentifierChar c -> scanIdentifier_ s { getLocation = (line, column + 1) } rest (c : ident)
-        | otherwise   -> makeToken
+        | isIdentifierChar c -> scanIdentifier_ s { getLocation = (line, column + 1) } rest (c : ident) startLoc
+        | otherwise -> makeToken
     where
         tokens = getTokens s
         location = getLocation s
@@ -160,20 +159,20 @@ scanIdentifier_ s src ident = case src of
 
         correctIdent = reverse ident
         makeIdentifierToken = case correctIdent of
-            "fun"    -> TkFun location
-            "return" -> TkReturn location
-            "print"  -> TkPrint location
-            "var"    -> TkVar location
-            "if"     -> TkIf location
-            "else"   -> TkElse location
-            "elif"   -> TkElif location
-            "while"  -> TkWhile location
-            "and"    -> TkAnd location
-            "or"     -> TkOr location
-            "not"    -> TkNot location
-            "true"   -> TkBoolLit "true" location
-            "false"  -> TkBoolLit "false" location
-            _        -> TkIdentifier correctIdent location
+            "fun"    -> TkFun startLoc
+            "return" -> TkReturn startLoc
+            "print"  -> TkPrint startLoc
+            "var"    -> TkVar startLoc
+            "if"     -> TkIf startLoc
+            "else"   -> TkElse startLoc
+            "elif"   -> TkElif startLoc
+            "while"  -> TkWhile startLoc
+            "and"    -> TkAnd startLoc
+            "or"     -> TkOr startLoc
+            "not"    -> TkNot startLoc
+            "true"   -> TkBoolLit "true" startLoc
+            "false"  -> TkBoolLit "false" startLoc
+            _        -> TkIdentifier correctIdent startLoc
  
 isIdentifierStartChar :: Char -> Bool
 isIdentifierStartChar c = c `elem` (concat [['A'..'Z'], ['a'..'z'], ['_']])       
@@ -182,17 +181,17 @@ isIdentifierChar :: Char -> Bool
 isIdentifierChar c = isIdentifierStartChar c || isDigit c
 
 scanNumber :: LexerState -> Source -> LexerState
-scanNumber s src = scanNumber_ s src ""
+scanNumber s src = scanNumber_ s src "" (getLocation s)
 
-scanNumber_ :: LexerState -> Source -> String -> LexerState
-scanNumber_ s src num = case src of
+scanNumber_ :: LexerState -> Source -> String -> Location -> LexerState
+scanNumber_ s src num startLoc = case src of
     [] -> makeNumber
     ['.'] -> floatError ""
     ('.' : c : rest)
-        | isDigit c -> scanNumber_ s { getLocation = (line, column + 1) } (c : rest) ('.' : num)
+        | isDigit c -> scanNumber_ s { getLocation = (line, column + 1) } (c : rest) ('.' : num) startLoc
         | otherwise -> floatError (c : rest)
     (c : rest)
-        | isDigit c -> scanNumber_ s { getLocation = (line, column + 1) } rest (c : num)
+        | isDigit c -> scanNumber_ s { getLocation = (line, column + 1) } rest (c : num) startLoc
         | isIdentifierStartChar c -> 
             scanTokens s { getErrors = ("Identifiers can't begin with numbers", location) : errors } src
         | otherwise -> makeNumber
@@ -203,20 +202,20 @@ scanNumber_ s src num = case src of
         (line, column) = location
         
         makeNumber = 
-            scanTokens s { getTokens = TkNumberLit (reverse num) location : tokens, getLocation = (line, column + 1) } src
+            scanTokens s { getTokens = TkNumberLit (reverse num) startLoc : tokens, getLocation = (line, column + 1) } src
         
         floatError =
             scanTokens s { getErrors = ("Invalid 'Float' syntax", location) : errors }
 
 scanString :: LexerState -> Source -> LexerState
-scanString s src = scanString_ s src ""
+scanString s src = scanString_ s src "" (getLocation s)
 
-scanString_ :: LexerState -> Source -> String -> LexerState
-scanString_ s src str = case src of
+scanString_ :: LexerState -> Source -> String -> Location -> LexerState
+scanString_ s src str startLoc = case src of
     []           -> errorState
     ('\n' : _)   -> errorState
-    ('"' : rest) -> scanTokens s { getTokens = (TkStringLit (reverse str) location) : tokens , getLocation = (line, column + 1) } rest
-    (c : rest)   -> scanString_ s { getLocation = (line, column + 1) } rest (c : str)
+    ('"' : rest) -> scanTokens s { getTokens = (TkStringLit (reverse str) startLoc) : tokens , getLocation = (line, column + 1) } rest
+    (c : rest)   -> scanString_ s { getLocation = (line, column + 1) } rest (c : str) startLoc
     where
         tokens = getTokens s
         errors = getErrors s
@@ -224,4 +223,4 @@ scanString_ s src str = case src of
         (line, column) = location
         
         errorState = 
-            scanTokens s { getErrors = ("String literal is not closed", location) : errors } src
+            scanTokens s { getErrors = ("String literal is not closed", startLoc) : errors } src

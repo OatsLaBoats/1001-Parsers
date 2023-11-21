@@ -4,14 +4,10 @@ module Lexer
     ) where
 
 import Data.Char
+import Error
 
 type Source = String
-
-type Location = (Int, Int)
 type Lexeme = String
-
-type Message = String
-type Error = (Message, Location)
 
 data LexerState = LexerState
     { getTokens :: [Token]

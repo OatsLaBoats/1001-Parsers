@@ -4,8 +4,9 @@ import System.Environment
 import System.Exit
 import System.Directory
 import Data.List
-
+import qualified Error
 import qualified Lexer
+import qualified Parser
 
 main :: IO ()
 main = do
@@ -17,7 +18,7 @@ main = do
         [] -> return ()
         xs -> do
             mapM_ putStrLn xs
-            exitWith (ExitFailure 1)
+            exitWith $ ExitFailure 1
     
     if "--help" `elem` args then do
         putStrLn "Usage: sigma [options...] \"source file\"\n\
@@ -34,7 +35,7 @@ main = do
     let sourceFile =
             case filter (isSuffixOf ".sigma") args of
                 [] -> ""
-                (sourceFile : _) -> sourceFile
+                (sf : _) -> sf
 
     if null sourceFile
         then raiseError "Error: No source file provided"
@@ -46,12 +47,19 @@ main = do
         else return ()
 
     source <- readFile sourceFile
-    putStrLn . show $ Lexer.scan source
+    tokens <- case Lexer.scan source of
+        Left errors -> do
+            mapM_ putStrLn (map Error.makeErrorMessage errors)
+            exitWith $ ExitFailure 1
+        Right tokens -> return tokens
+
+    let ast = Parser.parse tokens
+    return ()
 
 raiseError :: String -> IO ()                   
 raiseError s = do
     putStrLn s
-    exitWith (ExitFailure 1)
+    exitWith $ ExitFailure 1
 
 validateArgs :: [String] -> [String]
 validateArgs args = case args of

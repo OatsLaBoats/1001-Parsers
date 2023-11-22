@@ -61,7 +61,9 @@ executable Haskell
     other-modules:
         Error,
         Lexer,
+        Ast,
         Parser,
+        Parser.Util,
         Parser.Expr,
         Parser.Structure
 

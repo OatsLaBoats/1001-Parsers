@@ -13,7 +13,7 @@ data LexerState = LexerState
     { getTokens :: [Token]
     , getErrors :: [Error]
     , getLocation :: Location
-    } deriving Show
+    }
 
 data Token 
     = TkFun Location

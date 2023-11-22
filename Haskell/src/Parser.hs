@@ -1,8 +1,19 @@
 module Parser (parse) where
 
-import Lexer
+import Error
+import Lexer hiding (scan)
+import Ast
+import Parser.Structure
 
-data Ast
+parse :: [Token] -> Either Error Ast
+parse = parse_ []
 
-parse :: [Token] -> Ast
-parse tokens = undefined
+parse_ :: Ast -> [Token] -> Either Error Ast
+parse_ ast tokens = case tokens of
+    []                   -> Right ast
+    (TkLineEnd _ : rest) -> parse_ ast rest
+    _                    -> do
+        let (result, rest) = parseFunction tokens
+        f <- result
+        newAst <- parse_ (f : ast) rest
+        return newAst

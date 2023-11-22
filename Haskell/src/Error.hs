@@ -13,5 +13,5 @@ makeErrorMessage :: Error -> String
 makeErrorMessage (msg, loc) =
     case loc of
         (-1, _) -> "Error: " ++ msg
-        (l, -1) -> "Error(" ++ show l ++ "):" ++ msg
-        (l, c)  -> "Error(" ++ show l ++ ":" ++ show c ++ "):" ++ msg
+        (l, -1) -> "Error(" ++ show l ++ "): " ++ msg
+        (l, c)  -> "Error(" ++ show l ++ ":" ++ show c ++ "): " ++ msg

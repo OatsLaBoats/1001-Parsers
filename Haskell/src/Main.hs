@@ -20,7 +20,14 @@ main = do
             mapM_ putStrLn xs
             exitWith $ ExitFailure 1
     
-    if "--help" `elem` args then do
+    let showHelp = "--help" `elem` args
+        printAll = "--print-all" `elem` args
+        printTokens = printAll || "--print-tokens" `elem` args
+        printAst = printAll || "--print-ast" `elem` args
+        enableOptimizations = "--fast" `elem` args
+        onlyCompile = "--only-compile" `elem` args
+
+    if showHelp then do
         putStrLn "Usage: sigma [options...] \"source file\"\n\
                  \Options:\n\
                  \         --help          Displays this message.\n\
@@ -54,7 +61,11 @@ main = do
         Right tokens -> return tokens
 
     let ast = Parser.parse tokens
-    return ()
+    print ast
+    
+    if printTokens
+        then mapM_ putStrLn (map show tokens)
+        else return ()
 
 raiseError :: String -> IO ()                   
 raiseError s = do

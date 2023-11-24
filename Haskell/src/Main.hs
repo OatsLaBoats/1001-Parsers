@@ -7,6 +7,7 @@ import Data.List
 import qualified Error
 import qualified Lexer
 import qualified Parser
+import qualified Ast.Display as D
 
 main :: IO ()
 main = do
@@ -26,6 +27,8 @@ main = do
         printAst = printAll || "--print-ast" `elem` args
         enableOptimizations = "--fast" `elem` args
         onlyCompile = "--only-compile" `elem` args
+        
+    print (showHelp, printAll, printTokens, printAst, enableOptimizations, onlyCompile)
 
     if showHelp then do
         putStrLn "Usage: sigma [options...] \"source file\"\n\
@@ -61,7 +64,9 @@ main = do
         Right tokens -> return tokens
 
     let ast = Parser.parse tokens
-    print ast
+    case ast of
+        Right tree -> putStrLn $ D.displayAst tree
+        Left _ -> return ()
     
     if printTokens
         then mapM_ putStrLn (map show tokens)

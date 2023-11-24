@@ -22,7 +22,7 @@ data Type
     deriving Show
 
 -- name returnType parameterList block loc
-data Function = Function Name Type [Parameter] Block Location deriving Show
+data Function = Function Name (Maybe Type) [Parameter] Block Location deriving Show
 data Parameter = Parameter Name Type Location deriving Show
 type Block = [Stmt]
 
@@ -31,7 +31,8 @@ data Stmt
     | ReturnStmt Expr Location
     | PrintStmt Expr
     | WhileStmt Expr Block Location
-    | IfStmt Expr Block Stmt Location -- cond block elif/else loc
+    | IfStmt Expr Block (Maybe Stmt) Location -- cond block elif/else loc
+    | ElifStmt Expr Block (Maybe Stmt) Location
     | ElseStmt Block
     | AssignmentStmt Name Expr Location 
     | IndexAssignmentStmt Name Expr Expr Location -- name index expr loc

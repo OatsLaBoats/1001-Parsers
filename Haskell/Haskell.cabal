@@ -62,6 +62,7 @@ executable Haskell
         Error,
         Lexer,
         Ast,
+        Ast.Display,
         Parser,
         Parser.Util,
         Parser.Expr,

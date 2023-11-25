@@ -13,7 +13,7 @@ main :: IO ()
 main = do
     args1 <- getArgs
     print args1
-    let args = ["../a.sigma"]
+    let args = ["../a.sigma", "--print-tokens"]
     
     case validateArgs args of
         [] -> return ()
@@ -63,13 +63,18 @@ main = do
             exitWith $ ExitFailure 1
         Right tokens -> return tokens
 
-    let ast = Parser.parse tokens
-    case ast of
-        Right tree -> putStrLn $ D.displayAst tree
-        Left _ -> return ()
+    ast <- case Parser.parse tokens of
+        Left error -> do
+            putStrLn $ Error.makeErrorMessage error
+            exitWith $ ExitFailure 1
+        Right tree -> return tree
     
     if printTokens
         then mapM_ putStrLn (map show tokens)
+        else return ()
+    
+    if printAst
+        then putStrLn $ D.displayAst ast
         else return ()
 
 raiseError :: String -> IO ()                   

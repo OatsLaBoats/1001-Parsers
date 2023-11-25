@@ -1,5 +1,6 @@
 module Lexer 
     ( Token(..)
+    , TokenKind(..)
     , scan
     ) where
 
@@ -15,47 +16,52 @@ data LexerState = LexerState
     , getLocation :: Location
     }
 
-data Token 
-    = TkFun Location
-    | TkReturn Location
-    | TkPrint Location
-    | TkVar Location
-    | TkIf Location
-    | TkElse Location
-    | TkElif Location
-    | TkWhile Location
-    | TkIdentifier Lexeme Location
-    | TkNumberLit Lexeme Location
-    | TkStringLit Lexeme Location
-    | TkBoolLit Lexeme Location
-    | TkPlus Location
-    | TkMinus Location
-    | TkMul Location
-    | TkDiv Location
-    | TkMod Location
-    | TkEq Location
-    | TkNeq Location
-    | TkGt Location
-    | TkLt Location
-    | TkGtEq Location
-    | TkLtEq Location
-    | TkAnd Location
-    | TkOr Location
-    | TkNot Location
-    | TkLParen Location   -- (
-    | TkRParen Location   -- )
-    | TkLBrace Location   -- {
-    | TkRBrace Location   -- }
-    | TkLBracket Location -- [
-    | TkRBracket Location -- ]
-    | TkEqual Location
-    | TkColon Location
-    | TkComma Location
-    | TkLineEnd Location
+data TokenKind
+    = TkFun
+    | TkReturn
+    | TkPrint
+    | TkVar
+    | TkIf
+    | TkElif
+    | TkElse
+    | TkWhile
+    | TkIdentifier
+    | TkNumberLit
+    | TkStringLit
+    | TkBoolLit
+    | TkPlus
+    | TkMinus
+    | TkMul
+    | TkDiv
+    | TkMod
+    | TkEq
+    | TkNeq
+    | TkGt
+    | TkLt
+    | TkGtEq
+    | TkLtEq
+    | TkAnd
+    | TkOr
+    | TkNot
+    | TkLParen
+    | TkRParen
+    | TkLBrace
+    | TkRBrace
+    | TkLBracket
+    | TkRBracket
+    | TkEqual
+    | TkColon
+    | TkComma
+    | TkLineEnd
     | TkEOF
-    deriving Show
+    deriving (Show, Eq)
 
--- TODO: Change the name of bindings in functions some of them are terrible
+data Token = Token
+    { getTokenKind :: TokenKind
+    , getTokenLexeme :: String
+    , getTokenLocation :: Location
+    }
+    deriving Show
 
 scan :: Source -> Either [Error] [Token]
 scan src = 
@@ -69,48 +75,47 @@ scanTokens :: LexerState -> Source -> LexerState
 scanTokens s src = case src of
     []            -> s
 
-    (' ' : rest)  -> noToken rest
-    ('\t' : rest) -> noToken rest
-    ('\r' : rest) -> noToken rest
+    (' ' : rest)  -> skip rest
+    ('\t' : rest) -> skip rest
+    ('\r' : rest) -> skip rest
 
     ('#' : rest)  -> skipLine s rest
     
-    ('\n' : rest) -> 
-        scanTokens s { getTokens = (TkLineEnd location) : tokens, getLocation = (line + 1, 1)} rest
+    ('\n' : rest) -> advanceN (line + 1, 1) (makeToken TkLineEnd "\\n") rest
 
-    ('+' : rest) -> simpleToken (TkPlus location) rest
-    ('-' : rest) -> simpleToken (TkMinus location) rest
-    ('*' : rest) -> simpleToken (TkMul location) rest
-    ('/' : rest) -> simpleToken (TkDiv location) rest
-    ('%' : rest) -> simpleToken (TkMod location) rest
+    ('+' : rest) -> advance (makeToken TkPlus "+") rest
+    ('-' : rest) -> advance (makeToken TkMinus "-") rest
+    ('*' : rest) -> advance (makeToken TkMul "*") rest
+    ('/' : rest) -> advance (makeToken TkDiv "/") rest
+    ('%' : rest) -> advance (makeToken TkMod "%") rest
     
-    ('(' : rest) -> simpleToken (TkLParen location) rest
-    (')' : rest) -> simpleToken (TkRParen location) rest
-    ('{' : rest) -> simpleToken (TkLBrace location) rest
-    ('}' : rest) -> simpleToken (TkRBrace location) rest
-    ('[' : rest) -> simpleToken (TkLBracket location) rest
-    (']' : rest) -> simpleToken (TkRBracket location) rest
-    (':' : rest) -> simpleToken (TkColon location) rest
-    (',' : rest) -> simpleToken (TkComma location) rest
+    ('(' : rest) -> advance (makeToken TkLParen "(") rest
+    (')' : rest) -> advance (makeToken TkRParen ")") rest
+    ('{' : rest) -> advance (makeToken TkLBrace "{") rest
+    ('}' : rest) -> advance (makeToken TkRBrace "}") rest
+    ('[' : rest) -> advance (makeToken TkLBracket "[") rest
+    (']' : rest) -> advance (makeToken TkRBracket "]") rest
+    (':' : rest) -> advance (makeToken TkColon ":") rest
+    (',' : rest) -> advance (makeToken TkComma ",") rest
     
-    ('=' : '=' : rest) -> simpleToken2 (TkEq location) rest
-    ('=' : rest)       -> simpleToken (TkEqual location) rest
+    ('=' : '=' : rest) -> advance2 (makeToken TkEq "==") rest
+    ('=' : rest)       -> advance (makeToken TkEqual "=") rest
     
-    ('!' : '=' : rest) -> simpleToken2 (TkNeq location) rest
-    ('!' : rest)       -> makeError "Incomplete '!=' operator" rest
+    ('!' : '=' : rest) -> advance2 (makeToken TkNeq "!=") rest
+    ('!' : rest)       -> advanceError "Incomplete '!=' operator" rest
     
-    ('>' : '=' : rest) -> simpleToken2 (TkGtEq location) rest
-    ('>' : rest)       -> simpleToken (TkGt location) rest
+    ('>' : '=' : rest) -> advance2 (makeToken TkGtEq ">=") rest
+    ('>' : rest)       -> advance (makeToken TkGt ">") rest
 
-    ('<' : '=' : rest) -> simpleToken2 (TkLtEq location) rest
-    ('<' : rest)       -> simpleToken (TkLt location) rest
+    ('<' : '=' : rest) -> advance2 (makeToken TkLtEq "<=") rest
+    ('<' : rest)       -> advance (makeToken TkLt "<") rest
     
     ('"' : rest) -> scanString s { getLocation = (line, column + 1) } rest
     
     (c : rest)
         | isDigit c               -> scanNumber s src
         | isIdentifierStartChar c -> scanIdentifier s src
-        | otherwise               -> makeError "Unexpected character" rest
+        | otherwise               -> advanceError "Unexpected character" rest
     
     where
         tokens = getTokens s
@@ -118,17 +123,13 @@ scanTokens s src = case src of
         location = getLocation s
         (line, column) = location
 
-        noToken = 
-            scanTokens s { getLocation = (line, column + 1) }
-        
-        simpleToken token =
-            scanTokens s { getTokens = token : tokens, getLocation = (line, column + 1) }
-        
-        simpleToken2 token =
-            scanTokens s { getTokens = token : tokens, getLocation = (line, column + 2) }
-        
-        makeError message = 
-            scanTokens s { getErrors = (message, location) : errors, getLocation = (line, column + 1) }
+        makeToken kind lexeme = Token kind lexeme location
+
+        skip = scanTokens s { getLocation = (line, column + 1) }
+        advanceN loc token = scanTokens s { getTokens = token : tokens, getLocation = loc }
+        advance = advanceN (line, column + 1)
+        advance2 = advanceN (line, column + 2)
+        advanceError message = scanTokens s { getErrors = (message, location) : errors, getLocation = (line, column + 1) }
 
 skipLine :: LexerState -> Source -> LexerState
 skipLine s src = case src of
@@ -139,36 +140,37 @@ skipLine s src = case src of
         (line, column) = getLocation s
 
 scanIdentifier :: LexerState -> Source -> LexerState
-scanIdentifier s src = scanIdentifier_ s src "" (getLocation s)
+scanIdentifier s src = scanIdentifier_ (getLocation s) s src "" 
 
-scanIdentifier_ :: LexerState -> Source -> String -> Location -> LexerState
-scanIdentifier_ s src ident startLoc = case src of
-    [] -> makeToken
+scanIdentifier_ :: Location -> LexerState -> Source -> String -> LexerState
+scanIdentifier_ startLocation s src ident = case src of
+    [] -> advance
     (c : rest)
-        | isIdentifierChar c -> scanIdentifier_ s { getLocation = (line, column + 1) } rest (c : ident) startLoc
-        | otherwise -> makeToken
+        | isIdentifierChar c -> next rest (c : ident)
+        | otherwise -> advance
     where
         tokens = getTokens s
         location = getLocation s
         (line, column) = location
-        makeToken = scanTokens s { getTokens = makeIdentifierToken : tokens } src
-
-        correctIdent = reverse ident
-        makeIdentifierToken = case correctIdent of
-            "fun"    -> TkFun startLoc
-            "return" -> TkReturn startLoc
-            "print"  -> TkPrint startLoc
-            "var"    -> TkVar startLoc
-            "if"     -> TkIf startLoc
-            "else"   -> TkElse startLoc
-            "elif"   -> TkElif startLoc
-            "while"  -> TkWhile startLoc
-            "and"    -> TkAnd startLoc
-            "or"     -> TkOr startLoc
-            "not"    -> TkNot startLoc
-            "true"   -> TkBoolLit "true" startLoc
-            "false"  -> TkBoolLit "false" startLoc
-            _        -> TkIdentifier correctIdent startLoc
+        
+        next = scanIdentifier_ startLocation s { getLocation = (line, column + 2) }
+        advance = scanTokens s { getTokens = makeToken : tokens } src
+        makeToken = case identifier of
+            "fun"    -> Token TkFun identifier startLocation
+            "return" -> Token TkReturn identifier startLocation
+            "print"  -> Token TkPrint identifier startLocation
+            "var"    -> Token TkVar identifier startLocation
+            "if"     -> Token TkIf identifier startLocation
+            "else"   -> Token TkElse identifier startLocation
+            "elif"   -> Token TkElif identifier startLocation
+            "while"  -> Token TkWhile identifier startLocation
+            "and"    -> Token TkAnd identifier startLocation
+            "or"     -> Token TkOr identifier startLocation
+            "not"    -> Token TkNot identifier startLocation
+            "true"   -> Token TkBoolLit identifier startLocation
+            "false"  -> Token TkBoolLit identifier startLocation
+            _        -> Token TkIdentifier identifier startLocation
+            where identifier = reverse ident
  
 isIdentifierStartChar :: Char -> Bool
 isIdentifierStartChar c = c `elem` (concat [['A'..'Z'], ['a'..'z'], ['_']])       
@@ -177,46 +179,46 @@ isIdentifierChar :: Char -> Bool
 isIdentifierChar c = isIdentifierStartChar c || isDigit c
 
 scanNumber :: LexerState -> Source -> LexerState
-scanNumber s src = scanNumber_ s src "" (getLocation s)
+scanNumber s src = scanNumber_ (getLocation s) s src ""
 
-scanNumber_ :: LexerState -> Source -> String -> Location -> LexerState
-scanNumber_ s src num startLoc = case src of
-    [] -> makeNumber
-    ['.'] -> floatError ""
+scanNumber_ :: Location -> LexerState -> Source -> String -> LexerState
+scanNumber_ startLocation s src num = case src of
+    [] -> advance
+    ['.'] -> advanceError floatError ""
     ('.' : c : rest)
-        | isDigit c -> scanNumber_ s { getLocation = (line, column + 1) } (c : rest) ('.' : num) startLoc
-        | otherwise -> floatError (c : rest)
+        | isDigit c -> next (c : rest) ('.' : num)
+        | otherwise -> advanceError floatError (c : rest)
     (c : rest)
-        | isDigit c -> scanNumber_ s { getLocation = (line, column + 1) } rest (c : num) startLoc
-        | isIdentifierStartChar c -> 
-            scanTokens s { getErrors = ("Identifiers can't begin with numbers", location) : errors } src
-        | otherwise -> makeNumber
+        | isDigit c -> next rest (c : num)
+        | isIdentifierStartChar c -> advanceError "Identifiers can't begin with numbers" src
+        | otherwise -> advance
     where
         tokens = getTokens s
         errors = getErrors s
         location = getLocation s
         (line, column) = location
         
-        makeNumber = 
-            scanTokens s { getTokens = TkNumberLit (reverse num) startLoc : tokens, getLocation = (line, column + 1) } src
-        
-        floatError =
-            scanTokens s { getErrors = ("Invalid 'Float' syntax", location) : errors }
+        makeToken = Token TkNumberLit (reverse num) startLocation
+        next = scanNumber_ startLocation s { getLocation = (line, column + 1) }
+        advance = scanTokens s { getTokens = makeToken : tokens, getLocation = (line, column + 1) } src
+        advanceError message = scanTokens s { getErrors = (message, location) : errors }
+        floatError = "Invalid 'Float' syntax"
 
 scanString :: LexerState -> Source -> LexerState
-scanString s src = scanString_ s src "" (getLocation s)
+scanString s src = scanString_ (getLocation s) s src ""
 
-scanString_ :: LexerState -> Source -> String -> Location -> LexerState
-scanString_ s src str startLoc = case src of
-    []           -> errorState
-    ('\n' : _)   -> errorState
-    ('"' : rest) -> scanTokens s { getTokens = (TkStringLit (reverse str) startLoc) : tokens , getLocation = (line, column + 1) } rest
-    (c : rest)   -> scanString_ s { getLocation = (line, column + 1) } rest (c : str) startLoc
+scanString_ :: Location -> LexerState -> Source -> String -> LexerState
+scanString_ startLocation s src str = case src of
+    []           -> advanceError
+    ('\n' : _)   -> advanceError
+    ('"' : rest) -> advance rest
+    (c : rest)   -> next rest (c : str)
     where
         tokens = getTokens s
         errors = getErrors s
-        location = getLocation s
-        (line, column) = location
+        (line, column) = getLocation s
         
-        errorState = 
-            scanTokens s { getErrors = ("String literal is not closed", startLoc) : errors } src
+        makeToken = Token TkStringLit (reverse str) startLocation
+        next = scanString_ startLocation s { getLocation = (line, column + 1) }
+        advance = scanTokens s { getTokens = makeToken : tokens, getLocation = (line, column + 1) }
+        advanceError = scanTokens s { getErrors = ("String literal isn't closed", startLocation) : errors } src

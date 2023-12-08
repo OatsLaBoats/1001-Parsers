@@ -51,8 +51,8 @@ data PrimaryExpr
     | BoolLit Bool
     | StringLit String
     | ArrayLit [Expr] Location
-    | Identifier String Location
-    | Call String [Expr] Location
+    | AccessExpr String Location
+    | CallExpr String [Expr] Location
     | ParenExpr Expr
     deriving Show
 

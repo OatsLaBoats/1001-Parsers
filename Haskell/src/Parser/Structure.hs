@@ -5,7 +5,15 @@ module Parser.Structure
 import Error
 import Lexer hiding (scan)
 import Ast
+import Parser.Util
 
-parseFunction :: [Token] -> Either Error (Function, [Token])
+-- Maybe create a type like Parser a = [Token] -> Either Error ([Token], a)
+-- Note: Maybe use combinators
+parseFunction :: Parser Function
 parseFunction tokens = do
-    return $ (Function "" Nothing [] [] (-1, -1), [])
+    (rest, _) <- expect TkFun tokens "Expected 'fun' keyword" 
+    (rest, identifier) <- expect TkIdentifier rest "Expected identifier after 'fun' keyword"
+
+    let name = getTokenLexeme identifier 
+    
+    return ([], Function name Nothing [] [] (-1, -1))

@@ -4,6 +4,8 @@ module Lexer
     , scan
     ) where
 
+-- TODO: Maybe use combinators
+
 import Data.Char
 import Error
 
@@ -58,7 +60,7 @@ data TokenKind
 
 data Token = Token
     { getTokenKind :: TokenKind
-    , getTokenLexeme :: String
+    , getTokenLexeme :: Lexeme
     , getTokenLocation :: Location
     }
     deriving Show
@@ -73,12 +75,11 @@ scan src =
 
 scanTokens :: LexerState -> Source -> LexerState
 scanTokens s src = case src of
-    []            -> s
+    [] -> s
 
     (' ' : rest)  -> skip rest
     ('\t' : rest) -> skip rest
     ('\r' : rest) -> skip rest
-
     ('#' : rest)  -> skipLine s rest
     
     ('\n' : rest) -> advanceN (line + 1, 1) (makeToken TkLineEnd "\\n") rest

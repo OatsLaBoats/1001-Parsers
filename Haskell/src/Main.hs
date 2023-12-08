@@ -64,8 +64,8 @@ main = do
         Right tokens -> return tokens
 
     ast <- case Parser.parse tokens of
-        Left error -> do
-            putStrLn $ Error.makeErrorMessage error
+        Left e -> do
+            putStrLn $ Error.makeErrorMessage e
             exitWith $ ExitFailure 1
         Right tree -> return tree
     

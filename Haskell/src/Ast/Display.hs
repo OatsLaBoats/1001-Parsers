@@ -104,8 +104,8 @@ displayPrimaryExpr expr i =
         (FloatLit f)     -> indent (i+1) ++ "literal(Float): " ++ show f ++ "\n"
         (BoolLit b)      -> indent (i+1) ++ "literal(Bool): " ++ show b ++ "\n"
         (StringLit s)    -> indent (i+1) ++ "literal(String): \"" ++ s ++ "\"\n"
-        (Identifier s _) -> indent (i+1) ++ "identifier(access): " ++ s ++ "\n"
-        (Call s xs _) ->
+        (AccessExpr s _) -> indent (i+1) ++ "identifier(access): " ++ s ++ "\n"
+        (CallExpr s xs _) ->
             indent (i+1) ++ "identifier(call): " ++ s ++ "\n" ++
             indent (i+1) ++ "parameters:\n" ++
             foldr (\e acc -> acc ++ displayExpr e (i+2)) "" xs

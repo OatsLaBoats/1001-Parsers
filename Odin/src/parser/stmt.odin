@@ -98,7 +98,7 @@ parse_if_stmt :: proc(parser: ^Parser) -> ^ast.If_Stmt {
     istmt.else_block = nil
 
     skip_while(parser, .Line_End)
-        
+     
     if match(parser, .Elif) {
         istmt.elif_stmt = parse_if_stmt(parser)
     } else if match(parser, .Else) {

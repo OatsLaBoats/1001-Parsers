@@ -5,6 +5,7 @@ module Lexer
     ) where
 
 -- TODO: Maybe use combinators
+-- TODO: Fix column tracking bug
 
 import Data.Char
 import Error

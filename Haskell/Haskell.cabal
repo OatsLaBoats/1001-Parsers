@@ -68,6 +68,8 @@ executable Haskell
         Parser,
         Parser.Util,
         Parser.Expr,
+        Parser.Type,
+        Parser.Stmt,
         Parser.Structure
 
     -- LANGUAGE extensions used by modules in this package.

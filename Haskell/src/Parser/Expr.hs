@@ -4,10 +4,10 @@ module Parser.Expr
 
 import Ast
 import Parser.Util
-import Lexer
+import Lexer hiding (scan)
 
 parseExpr :: Parser Expr
-parseExpr = parseFactorExpr
+parseExpr = parseOrExpr
 
 parseOrExpr :: Parser Expr
 parseOrExpr tokens = do
@@ -140,7 +140,8 @@ parsePrimaryExpr tokens = case tokens of
         (rest, _) <- expect TkRBracket rest "Expected ']'"
         return (rest, PrimaryExpr $ ArrayLit exprs loc)
     
-    (Token _ _ loc : rest) -> Left ("Expected expression", loc)
+    (Token _ _ loc : _) -> Left ("Expected expression", loc)
+    _ -> Left ("Expected expression but reached end of file", (-1, -1))
         
 parseArrayLit :: [Expr] -> Parser [Expr]
 parseArrayLit acc tokens

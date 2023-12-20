@@ -3,7 +3,7 @@ module Parser.Stmt
     , parseStmt
     ) where
 
-import Lexer
+import Lexer hiding (scan)
 import Ast
 import Parser.Util
 import Parser.Expr
@@ -14,12 +14,12 @@ parseBlock tokens = do
     (rest, _) <- expect TkLBrace tokens "Expected '{'"
     (rest, block) <- parseStmts [] rest
     (rest, _) <- expect TkRBrace rest "Expected '}'"
-    return (rest, block)
+    return (rest, reverse block)
     where
         parseStmts acc tokens = case tokens of
             [] -> Right ([], acc)
             (Token TkLineEnd _ _ : rest) -> parseStmts acc rest
-            (Token TkRBrace _ _ : _) -> Right (tokens, reverse acc)
+            (Token TkRBrace _ _ : _) -> Right (tokens, acc)
             _ -> do
                 (rest, stmt) <- parseStmt tokens
                 parseStmts (stmt : acc) rest
@@ -34,7 +34,7 @@ parseStmt tokens = case tokens of
     _
         | isAssignment && isIndex -> parseIndexAssignment tokens
         | isAssignment -> parseAssignment tokens
-        | otherwise -> parseRawExprStmt tokens -- TODO: There is a bug with raw exprs
+        | otherwise -> parseRawExprStmt tokens -- TODO: There is a bug with raw exprs. We can't just write 1 + 20 raw
     where
         isAssignment = 
             elem TkEqual .
@@ -81,9 +81,9 @@ parseIfStmt tokens = do
     (rest, cond) <- parseExpr rest
     (rest, block) <- parseBlock rest
     
-    let rest = dropWhile (\(Token kind _ _) -> kind == TkLineEnd) rest
+    let rest' = dropWhile (\(Token kind _ _) -> kind == TkLineEnd) rest
 
-    (rest, branch) <- parseBranch rest
+    (rest, branch) <- parseBranch rest'
     return (rest, IfStmt cond block branch (getTokenLocation keyword))
 
 parseBranch :: Parser (Maybe Stmt)
@@ -94,7 +94,7 @@ parseBranch tokens = case tokens of
     (Token TkElse _ _ : _) -> do
         (rest, stmt) <- parseElseStmt tokens
         return (rest, Just stmt)
-    (Token _ _ _ : _) -> Right (tokens, Nothing)   
+    _ -> Right (tokens, Nothing)   
 
 parseElifStmt :: Parser Stmt
 parseElifStmt tokens = do
@@ -102,9 +102,9 @@ parseElifStmt tokens = do
     (rest, cond) <- parseExpr rest
     (rest, block) <- parseBlock rest
 
-    let rest = dropWhile (\(Token kind _ _) -> kind == TkLineEnd) rest
+    let rest' = dropWhile (\(Token kind _ _) -> kind == TkLineEnd) rest
 
-    (rest, branch) <- parseBranch rest
+    (rest, branch) <- parseBranch rest'
     return (rest, ElifStmt cond block branch (getTokenLocation keyword))
 
 parseElseStmt :: Parser Stmt

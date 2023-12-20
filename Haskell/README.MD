@@ -4,4 +4,6 @@ The lsp is way to eager to give suggestions even from modules that are not impor
 
 lazyness do be going crazy doe
 
+Shadowing is not well implemented and can often cause bugs
+
 monads are dope

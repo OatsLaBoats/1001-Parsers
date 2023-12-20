@@ -3,7 +3,7 @@ module Parser.Type
     ) where
 
 import Ast
-import Lexer
+import Lexer hiding (scan)
 import Parser.Util
 
 parseTypeAnnotation :: Parser Type

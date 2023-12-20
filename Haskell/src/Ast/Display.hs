@@ -10,13 +10,15 @@ displayFunction (Function name retType params block _) =
     "<Function>\n" ++
     indent 0 ++ "name: " ++ name ++ "\n" ++
     ifType (\t -> indent 0 ++ "returns: " ++ displayType t) retType ++ "\n" ++
-    doIf (\_ -> indent 0 ++ "parameters: [" ++ foldr (\p acc -> acc ++ displayParameter p) "" params  ++ "]") (not $ null params) ++ "\n" ++
+    doIf 
+        (\_ -> indent 0 ++ "parameters: [" ++ foldr (\p acc -> displayParameter p ++ acc) "" params  ++ "]") 
+        (not $ null params) ++ "\n" ++
     displayBlock block 1
 
 displayBlock :: Block -> Int -> String
 displayBlock b i =
     indent i ++ "<Block>\n" ++
-    foldr (\s acc -> acc ++ displayStmt s (i+1)) "" b
+    foldr (\s acc -> displayStmt s (i+1) ++ acc) "" b
 
 displayStmt :: Stmt -> Int -> String
 displayStmt stmt i = case stmt of
@@ -108,10 +110,10 @@ displayPrimaryExpr expr i =
         (CallExpr s xs _) ->
             indent (i+1) ++ "identifier(call): " ++ s ++ "\n" ++
             indent (i+1) ++ "parameters:\n" ++
-            foldr (\e acc -> acc ++ displayExpr e (i+2)) "" xs
+            foldr (\e acc -> displayExpr e (i+2) ++ acc) "" xs
         (ArrayLit xs _) ->
             indent (i+1) ++ "literal(Array):\n" ++
-            foldr (\e acc -> acc ++ displayExpr e (i+2)) "" xs
+            foldr (\e acc -> displayExpr e (i+2) ++ acc) "" xs
         (ParenExpr e) -> displayExpr e (i+1)
 
 displayParameter :: Parameter -> String

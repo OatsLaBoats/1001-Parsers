@@ -20,11 +20,11 @@ expect expected (token : rest) msg
 
 match :: TokenKind -> [Token] -> Bool
 match _ [] = False
-match expected (token : rest)
+match expected (token : _)
     | kind == expected = True
     | otherwise = False
     where (Token kind _ _) = token
 
 peek :: [Token] -> Token
 peek [] = Token TkEOF "" (-1, -1)
-peek (x : xs) = x
+peek (x : _) = x

@@ -70,7 +70,10 @@ executable Haskell
         Parser.Expr,
         Parser.Type,
         Parser.Stmt,
-        Parser.Structure
+        Parser.Structure,
+        Analyzer,
+        Analyzer.Internal,
+        Analyzer.Variables
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -78,7 +81,8 @@ executable Haskell
     -- Other library packages from which modules are imported.
     build-depends:
         base ^>=4.19.0.0,
-        directory ^>=1.3.8.1
+        directory ^>=1.3.8.1,
+        containers ^>=0.7
 
     -- Directories containing source files.
     hs-source-dirs: src

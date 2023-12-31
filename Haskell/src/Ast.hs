@@ -9,6 +9,8 @@ module Ast
     , PrimaryExpr(..)
     , UnaryOperator(..)
     , BinaryOperator(..)
+    , getFuncName
+    , getFuncLoc
     ) where
 
 import Error
@@ -19,10 +21,17 @@ type Ast = [Function]
 data Type
     = BaseType String
     | ArrayType Type
-    deriving Show
+    deriving (Show, Eq)
 
 -- name returnType parameterList block loc
 data Function = Function Name (Maybe Type) [Parameter] Block Location deriving Show
+
+getFuncName :: Function -> Name
+getFuncName (Function name _ _ _ _) = name
+
+getFuncLoc :: Function -> Location
+getFuncLoc (Function _ _ _ _ loc) = loc
+
 data Parameter = Parameter Name Type Location deriving Show
 type Block = [Stmt]
 

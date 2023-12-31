@@ -8,6 +8,7 @@ import qualified Error
 import qualified Lexer
 import qualified Parser
 import qualified Ast.Display as D
+import qualified Analyzer
 
 main :: IO ()
 main = do
@@ -68,6 +69,12 @@ main = do
             putStrLn $ Error.makeErrorMessage e
             exitWith $ ExitFailure 1
         Right tree -> return tree
+    
+    let analyzerErrors = Analyzer.analyze ast
+    if not . null $ analyzerErrors then do
+        mapM_ putStrLn (map Error.makeErrorMessage analyzerErrors)
+        exitWith $ ExitFailure 1
+    else return ()
     
     if printTokens
         then mapM_ putStrLn (map show tokens)

@@ -6,6 +6,7 @@ import Data.Function
 import Ast
 import Error
 import Analyzer.Internal
+import Analyzer.Variables
 
 analyze :: Ast -> [Error]
 analyze ast = 

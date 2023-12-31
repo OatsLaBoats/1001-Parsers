@@ -73,7 +73,8 @@ executable Haskell
         Parser.Structure,
         Analyzer,
         Analyzer.Internal,
-        Analyzer.Variables
+        Analyzer.Variables,
+        VarTable
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

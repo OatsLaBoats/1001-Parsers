@@ -6,6 +6,7 @@ module Lexer
 
 -- TODO: Maybe use combinators
 -- TODO: Fix column tracking bug
+-- TODO: Try writer monad maybe
 
 import Data.Char
 import Error
@@ -128,10 +129,19 @@ scanTokens s src = case src of
         makeToken kind lexeme = Token kind lexeme location
 
         skip = scanTokens s { getLocation = (line, column + 1) }
-        advanceN loc token = scanTokens s { getTokens = token : tokens, getLocation = loc }
+
+        advanceN loc token = scanTokens s 
+            { getTokens = token : tokens
+            , getLocation = loc
+            }
+            
         advance = advanceN (line, column + 1)
         advance2 = advanceN (line, column + 2)
-        advanceError message = scanTokens s { getErrors = (message, location) : errors, getLocation = (line, column + 1) }
+
+        advanceError message = scanTokens s 
+            { getErrors = (message, location) : errors
+            , getLocation = (line, column + 1)
+            }
 
 skipLine :: LexerState -> Source -> LexerState
 skipLine s src = case src of

@@ -12,6 +12,7 @@ analyze :: Ast -> [Error]
 analyze ast = 
     duplicateFunctionCheck ast (AnalyzerState Map.empty []) &
     validMainCheck &
+    duplicateVariableCheck &
     getErrors
 
 duplicateFunctionCheck :: Ast -> AnalyzerState -> AnalyzerState

@@ -3,12 +3,12 @@ module VarTable
     , empty
     , new
     , isVarDefined
+    , defineVar
     , getVar
     ) where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Maybe
 
 import Ast
 

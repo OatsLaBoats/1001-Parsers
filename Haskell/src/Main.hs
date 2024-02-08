@@ -10,6 +10,8 @@ import qualified Parser
 import qualified Ast.Display as D
 import qualified Analyzer
 
+-- TODO: Maybe use a monad transformer with IO to handle early return
+
 main :: IO ()
 main = do
     args1 <- getArgs

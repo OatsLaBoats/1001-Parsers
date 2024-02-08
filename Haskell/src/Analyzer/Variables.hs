@@ -9,6 +9,8 @@ import Ast
 import VarTable (VarTable)
 import qualified VarTable as VT
 
+-- TODO: Ensure that the errors are in the correct order
+
 duplicateVariableCheck :: AnalyzerState -> AnalyzerState
 duplicateVariableCheck s = foldr pred s (getTable s)
     where
@@ -62,6 +64,7 @@ checkBlock block = checkBlock_ [] [] block . VT.new
                         rest 
                         table'
                     
+-- We need to return the var table becvause not every statement creates a block and this will be called in loop like manner.
 checkStmt :: Stmt -> VarTable -> (Maybe Stmt, VarTable, [Error])
 checkStmt stmt table = case stmt of
     (VariableStmt name vType _ loc)
@@ -77,19 +80,42 @@ checkStmt stmt table = case stmt of
             )
     
     (WhileStmt expr block loc) ->
-        let (newBlock, errors) = checkBlock block table
+        let (block', errors) = checkBlock block table
         in case errors of
             [] -> (Just stmt, table, [])
             _  -> 
-                ( Just $ WhileStmt expr newBlock loc
+                ( Just $ WhileStmt expr block' loc
                 , table
                 , errors
                 )
 
-    (IfStmt _ _ _ _) -> undefined
+    (IfStmt expr block elifStmt loc) ->
+        let (block', errors) = checkBlock block table
+            (elifStmt', errors') = checkElifStmt elifStmt table
+        in ( Just $ IfStmt expr block' elifStmt' loc
+           , table
+           , errors ++ errors'
+           )
     
     (AssignmentStmt _ _ _) -> undefined
     
     (IndexAssignmentStmt _ _ _ _) -> undefined
     
     _ -> (Just stmt, table, [])
+
+checkElifStmt :: Maybe Stmt -> VarTable -> (Maybe Stmt, [Error])
+checkElifStmt stmt table = case stmt of
+    Nothing -> (stmt, [])
+
+    (Just (ElifStmt expr block elifStmt loc)) ->
+        let (block', errors) = checkBlock block table
+            (elifStmt', errors') = checkElifStmt elifStmt table
+        in  ( Just $ ElifStmt expr block' elifStmt' loc
+            , errors ++ errors'
+            )
+
+    (Just (ElseStmt block)) ->
+        let (block', errors) = checkBlock block table
+        in  (Just $ ElseStmt block', errors)
+
+    _ -> undefined -- Impossible to reach

@@ -9,8 +9,6 @@ import Ast
 import VarTable (VarTable)
 import qualified VarTable as VT
 
--- TODO: Ensure that the errors are in the correct order
-
 duplicateVariableCheck :: AnalyzerState -> AnalyzerState
 duplicateVariableCheck s = foldr pred s (getTable s)
     where
@@ -18,7 +16,7 @@ duplicateVariableCheck s = foldr pred s (getTable s)
             let (nf, errs) = checkFunction f
             in  AnalyzerState 
                     (Map.insert (getFuncName nf) nf (getTable acc))
-                    ((getErrors acc) ++ (reverse errs))
+                    ((getErrors acc) ++ errs)
 
 checkFunction :: Function -> (Function, [Error])
 checkFunction (Function name retType params block loc) =
@@ -64,7 +62,7 @@ checkBlock block = checkBlock_ [] [] block . VT.new
                         rest 
                         table'
                     
--- We need to return the var table becvause not every statement creates a block and this will be called in loop like manner.
+-- We need to return the var table because not every statement creates a block and this will be called in loop like manner.
 checkStmt :: Stmt -> VarTable -> (Maybe Stmt, VarTable, [Error])
 checkStmt stmt table = case stmt of
     (VariableStmt name vType _ loc)
@@ -97,9 +95,21 @@ checkStmt stmt table = case stmt of
            , errors ++ errors'
            )
     
-    (AssignmentStmt _ _ _) -> undefined
+    (AssignmentStmt name _ loc)
+        | VT.isVarDefined name table -> (Just stmt, table, [])
+        | otherwise -> 
+            ( Nothing
+            , table
+            , [("Variable '" ++ name ++ "' is undefined", loc)]
+            )
     
-    (IndexAssignmentStmt _ _ _ _) -> undefined
+    (IndexAssignmentStmt name _ _ loc)
+        | VT.isVarDefined name table -> (Just stmt, table, [])
+        | otherwise -> 
+            ( Nothing
+            , table
+            , [("Variable '" ++ name ++ "' is undefined", loc)]
+            )
     
     _ -> (Just stmt, table, [])
 

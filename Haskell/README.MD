@@ -14,3 +14,7 @@ This mostly came up during the analyzer where I often need to accumulate errors 
 In the parser for example this is not a problem because errors there don't occumulate so we can just use the Either monad.
 
 There is a lot that I don't know, it almost feels like an endless abyss of knowledge but honetly its pretty fun.
+
+It seems that the restrictions the language forces on lead to you making fewer errors. I initially thought this might be because
+I have already written it in an other language, and thats true to an extent. But seeing how different the approach is in comparisson
+leads me to believe that the language must be helping somewhat.

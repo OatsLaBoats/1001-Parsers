@@ -17,7 +17,7 @@ main = do
     args1 <- getArgs
     print args1
     let args = ["../a.sigma", "--print-tokens", "--print-ast"]
-    
+
     case validateArgs args of
         [] -> return ()
         xs -> do

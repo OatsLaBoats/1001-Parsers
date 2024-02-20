@@ -7,12 +7,14 @@ import Ast
 import Error
 import Analyzer.Internal
 import Analyzer.Variables
+import Analyzer.MissingReturn
 
 analyze :: Ast -> [Error]
 analyze ast = 
     duplicateFunctionCheck ast (AnalyzerState Map.empty []) &
     validMainCheck &
     duplicateVariableCheck &
+    missingReturnCheck &
     getErrors
 
 duplicateFunctionCheck :: Ast -> AnalyzerState -> AnalyzerState

@@ -75,6 +75,7 @@ executable Haskell
         Analyzer.Internal,
         Analyzer.Variables,
         Analyzer.MissingReturn,
+        Analyzer.Typechecker,
         VarTable
 
     -- LANGUAGE extensions used by modules in this package.

@@ -10,12 +10,11 @@ import Analyzer.Variables
 import Analyzer.MissingReturn
 
 analyze :: Ast -> [Error]
-analyze ast = 
-    duplicateFunctionCheck ast (AnalyzerState Map.empty []) &
-    validMainCheck &
-    duplicateVariableCheck &
-    missingReturnCheck &
-    getErrors
+analyze ast = getErrors
+    $ duplicateFunctionCheck ast (AnalyzerState Map.empty [])
+    & validMainCheck
+    & duplicateVariableCheck
+    & missingReturnCheck
 
 duplicateFunctionCheck :: Ast -> AnalyzerState -> AnalyzerState
 duplicateFunctionCheck ast s = foldr predicate s ast

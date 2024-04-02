@@ -1,4 +1,4 @@
-module Analyzer.Typechecker () where
+module Analyzer.Typechecker (typecheck) where
 
 import Analyzer.Internal
 import Ast
@@ -29,15 +29,15 @@ checkFunction (Function _ _ params block _) functions =
             params
 
 checkStmt :: Stmt -> TcState -> (VarTable, [Error])
-checkStmt stmt state@(funcs, table) = case stmt of
+checkStmt stmt state = case stmt of
     (VariableStmt _ _ _ _) -> checkVariableStmt stmt state
     _ -> undefined
 
 checkVariableStmt :: Stmt -> TcState -> (VarTable, [Error])
-checkVariableStmt stmt state@(funcs, table) = case stmt of
+checkVariableStmt stmt state@(_, table) = case stmt of
     (VariableStmt name varType expr loc) ->
         let (exprType, exprErrors) = checkExpr expr state
-        in if compareType varType exprType
+        in  if compareType1 varType exprType
             then ( VT.defineVar name varType table, exprErrors )
             else ( VT.defineVar name varType table
                  , exprErrors ++ [("Varible '" ++ name ++ "' doesn't match the assignment expression type", loc)]
@@ -52,16 +52,51 @@ checkExpr expr state = case expr of
     (PrimaryExpr pexpr) -> checkPrimaryExpr pexpr state
 
 checkPrimaryExpr :: PrimaryExpr -> TcState -> (Maybe Type, [Error])
-checkPrimaryExpr expr (funcs, table) = case expr of
+checkPrimaryExpr expr state@(funcs, table) = case expr of
     (IntLit _) -> (Just $ BaseType "Int", [])
     (BoolLit _) -> (Just $ BaseType "Bool", [])
     (FloatLit _) -> (Just $ BaseType "Float", [])
     (StringLit _) -> (Just $ BaseType "String", [])
+    (ArrayLit values loc) -> checkArrayLit values loc state
+    (ParenExpr expr) -> checkExpr expr state
+    (CallExpr name params loc) -> undefined
     (AccessExpr varName loc)
         | VT.isVarDefined varName table -> (VT.getVar varName table, [])
         | otherwise -> (Nothing, [("Variable '" ++ varName ++ "' doesn't exist", loc)])
 
-compareType :: Type -> Maybe Type -> Bool
-compareType t1 m = case m of
+-- This one is a bit crazy. Unlike the odin implementation this one checks all the
+-- expressions inside of the array, the odin version just returns on the first type error.
+checkArrayLit :: [Expr] -> Location -> TcState -> (Maybe Type, [Error])
+checkArrayLit [] _ _ = (Nothing, [])
+checkArrayLit (expr:exprs) loc state =
+    let result@(t, es) = check exprs []
+    in case t of
+        Nothing -> (t, errorMessage : es)
+        _ -> result
+    where
+        errorMessage = ("Multiple different types in array literal", loc)
+
+        (firstType, errors) = checkExpr expr state
+
+        -- Recursively goes through the expressions inside the literal and accumulates the errors.
+        -- If an errors occurred or the errs accumulator already had errors in it then we will assume failure.
+        -- May be possible to implement using fold.
+        check [] errs = (if null errs then firstType else Nothing, errors ++ errs)
+        check (x:xs) errs =
+            let (t, errors') = checkExpr x state
+                errs' = if compareType2 firstType t && null errs
+                        then [] 
+                        else errs ++ errors'
+            in check xs errs'
+
+compareType1 :: Type -> Maybe Type -> Bool
+compareType1 t1 m = case m of
     Just t2 -> t1 == t2
     Nothing -> False
+
+compareType2 :: Maybe Type -> Maybe Type -> Bool
+compareType2 m1 m2 = case m1 of
+    Nothing -> False
+    Just t1 -> case m2 of
+        Nothing -> False
+        Just t2 -> t1 == t2

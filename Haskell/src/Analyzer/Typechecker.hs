@@ -5,6 +5,8 @@ import Ast
 import Error
 import VarTable (VarTable)
 import qualified VarTable as VT
+import qualified Data.Map as M
+import Data.Maybe
 
 type TcState = (FunctionMap, VarTable)
 
@@ -52,17 +54,48 @@ checkExpr expr state = case expr of
     (PrimaryExpr pexpr) -> checkPrimaryExpr pexpr state
 
 checkPrimaryExpr :: PrimaryExpr -> TcState -> (Maybe Type, [Error])
-checkPrimaryExpr expr state@(funcs, table) = case expr of
+checkPrimaryExpr expr state@(_, table) = case expr of
     (IntLit _) -> (Just $ BaseType "Int", [])
     (BoolLit _) -> (Just $ BaseType "Bool", [])
     (FloatLit _) -> (Just $ BaseType "Float", [])
     (StringLit _) -> (Just $ BaseType "String", [])
     (ArrayLit values loc) -> checkArrayLit values loc state
     (ParenExpr expr) -> checkExpr expr state
-    (CallExpr name params loc) -> undefined
+    (CallExpr name params loc) -> checkCallExpr name params loc state
     (AccessExpr varName loc)
         | VT.isVarDefined varName table -> (VT.getVar varName table, [])
         | otherwise -> (Nothing, [("Variable '" ++ varName ++ "' doesn't exist", loc)])
+
+-- TODO: Handle builtins
+checkCallExpr :: String -> [Expr] -> Location -> TcState -> (Maybe Type, [Error])
+checkCallExpr name params loc state@(funcs, _)
+    | M.member name funcs =
+        if lenDif > 0 then
+            (Nothing, [("Too many arguments passed into function '" ++ name ++ "'", loc)])
+        else if lenDif < 0 then
+            (Nothing, [("Too few arguments passed into function '" ++ name ++ "'", loc)])
+        else checkParams params params' loc [] 0
+
+    | otherwise = (Nothing, [("Function '" ++ name ++ "' doesn't exist", loc)])
+    where
+        (Function _ retType params' _ _) = fromJust $ M.lookup name funcs
+        
+        lenDif = length params - length params'
+
+        -- Hello darkness my old friend.
+        checkParams :: [Expr] -> [Parameter] -> Location -> [Error] -> Int -> (Maybe Type, [Error])
+        checkParams [] [] _ errs _
+            | null errs = (retType, errs)
+            | otherwise = (Nothing, errs)
+        checkParams [] _ _ _ _ = undefined -- Unreachable
+        checkParams _ [] _ _ _ = undefined -- Unreachable
+        checkParams (x:xs) ((Parameter _ ptype _):ps) l errs i =
+            let (etype, errors) = checkExpr x state 
+            in if compareType1 ptype etype
+            then checkParams xs ps l errs (i+1)
+            else checkParams xs ps l 
+                (errs ++ errors ++ [("Type mismatch with argument " ++ show i, l)]) (i+1)
+
 
 -- This one is a bit crazy. Unlike the odin implementation this one checks all the
 -- expressions inside of the array, the odin version just returns on the first type error.
@@ -84,8 +117,8 @@ checkArrayLit (expr:exprs) loc state =
         check [] errs = (if null errs then firstType else Nothing, errors ++ errs)
         check (x:xs) errs =
             let (t, errors') = checkExpr x state
-                errs' = if compareType2 firstType t && null errs
-                        then [] 
+                errs' = if compareType2 firstType t
+                        then errs
                         else errs ++ errors'
             in check xs errs'
 

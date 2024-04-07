@@ -50,8 +50,21 @@ checkVariableStmt stmt state@(_, table) = case stmt of
 checkExpr :: Expr -> TcState -> (Maybe Type, [Error])
 checkExpr expr state = case expr of
     (BinaryExpr _ _ _ _) -> undefined
-    (UnaryExpr _ _ _) -> undefined
+    (UnaryExpr _ _ _) -> checkUnaryExpr expr state
     (PrimaryExpr pexpr) -> checkPrimaryExpr pexpr state
+
+checkUnaryExpr :: Expr -> TcState -> (Maybe Type, [Error])
+checkUnaryExpr expr state = case expr of
+    (UnaryExpr op expr loc) ->
+        let (etype, errors) = checkExpr expr state
+        in case op of
+            OpNeg
+                | compareType1 (BaseType "Int") etype || compareType1 (BaseType "Float") etype -> (etype, [])
+                | otherwise -> (Nothing, errors ++ [("'-' requires 'Float' or 'Int' operands", loc)])
+            OpNot
+                | compareType1 (BaseType "Bool") etype -> (etype, [])
+                | otherwise -> (Nothing, errors ++ [("'not' requires 'Bool' operands", loc)])
+    _ -> undefined
 
 checkPrimaryExpr :: PrimaryExpr -> TcState -> (Maybe Type, [Error])
 checkPrimaryExpr expr state@(_, table) = case expr of
@@ -82,7 +95,7 @@ checkCallExpr name params loc state@(funcs, _)
         
         lenDif = length params - length params'
 
-        -- Hello darkness my old friend.
+        -- Hello darkness my old friend...
         checkParams :: [Expr] -> [Parameter] -> Location -> [Error] -> Int -> (Maybe Type, [Error])
         checkParams [] [] _ errs _
             | null errs = (retType, errs)

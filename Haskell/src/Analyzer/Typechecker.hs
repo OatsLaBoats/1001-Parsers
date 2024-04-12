@@ -53,10 +53,54 @@ checkExpr expr state = case expr of
     (UnaryExpr _ _ _) -> checkUnaryExpr expr state
     (PrimaryExpr pexpr) -> checkPrimaryExpr pexpr state
 
+checkBinaryExpr :: Expr -> TcState -> (Maybe Type, [Error])
+checkBinaryExpr expr state = case expr of
+    (BinaryExpr op lexpr rexpr loc) -> case op of
+        OpOr -> orAnd
+        OpAnd -> orAnd
+        OpEq -> eqNeq
+        OpNeq -> eqNeq
+        where
+            (ltype, lErrors) = checkExpr lexpr state
+            (rtype, rErrors) = checkExpr rexpr state
+            errors = lErrors ++ rErrors
+
+            orAnd
+                | isBoolL && isBoolR = (Just tBool, [])
+                | otherwise = (Nothing, errors ++ [(opName ++ " requires 'Bool' operands", loc)])
+
+            eqNeq
+                | (isNumberL && isNumberR) || compareType2 ltype rtype = (Just tBool, [])
+                | otherwise = (Nothing, errors ++ [(opName ++ "requires operands of the same type", loc)])
+
+            gtLt = undefined
+
+            tBool = BaseType "Bool"
+            isBoolL = compareType1 tBool ltype
+            isBoolR = compareType1 tBool rtype
+
+            tFloat = BaseType "Float"
+            isFloatL = compareType1 tFloat ltype
+            isFloatR = compareType1 tFloat rtype
+
+            tInt = BaseType "Int"
+            isIntL = compareType1 tInt ltype
+            isIntR = compareType1 tInt rtype
+
+            isNumberL = isFloatL || isIntL
+            isNumberR = isFloatR || isIntR
+
+            opName = case op of
+                OpOr -> "or"
+                OpAnd -> "and"
+                OpEq -> "=="
+                OpNeq -> "!="
+    _ -> undefined
+
 checkUnaryExpr :: Expr -> TcState -> (Maybe Type, [Error])
 checkUnaryExpr expr state = case expr of
-    (UnaryExpr op expr loc) ->
-        let (etype, errors) = checkExpr expr state
+    (UnaryExpr op expr' loc) ->
+        let (etype, errors) = checkExpr expr' state
         in case op of
             OpNeg
                 | compareType1 (BaseType "Int") etype || compareType1 (BaseType "Float") etype -> (etype, [])

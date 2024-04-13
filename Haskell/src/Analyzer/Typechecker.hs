@@ -49,17 +49,29 @@ checkVariableStmt stmt state@(_, table) = case stmt of
 
 checkExpr :: Expr -> TcState -> (Maybe Type, [Error])
 checkExpr expr state = case expr of
-    (BinaryExpr _ _ _ _) -> undefined
+    (BinaryExpr _ _ _ _) -> checkBinaryExpr expr state
     (UnaryExpr _ _ _) -> checkUnaryExpr expr state
     (PrimaryExpr pexpr) -> checkPrimaryExpr pexpr state
 
 checkBinaryExpr :: Expr -> TcState -> (Maybe Type, [Error])
 checkBinaryExpr expr state = case expr of
-    (BinaryExpr op lexpr rexpr loc) -> case op of
-        OpOr -> orAnd
-        OpAnd -> orAnd
-        OpEq -> eqNeq
-        OpNeq -> eqNeq
+    (BinaryExpr op lexpr rexpr loc)
+        | not . null $ errors -> (Nothing, errors)
+        | otherwise -> case op of
+            OpOr -> orAnd
+            OpAnd -> orAnd
+            OpEq -> eqNeq
+            OpNeq -> eqNeq
+            OpGt -> gtLt
+            OpLt -> gtLt
+            OpGtEq -> gtLt
+            OpLtEq -> gtLt
+            OpSub -> subMulDiv
+            OpMul -> subMulDiv
+            OpDiv -> subMulDiv
+            OpMod -> opMod
+            OpAdd -> opAdd
+            OpIndex -> opIndex
         where
             (ltype, lErrors) = checkExpr lexpr state
             (rtype, rErrors) = checkExpr rexpr state
@@ -67,13 +79,36 @@ checkBinaryExpr expr state = case expr of
 
             orAnd
                 | isBoolL && isBoolR = (Just tBool, [])
-                | otherwise = (Nothing, errors ++ [(opName ++ " requires 'Bool' operands", loc)])
+                | otherwise = (Nothing, [("'" ++ opName ++ "' requires 'Bool' operands", loc)])
 
             eqNeq
                 | (isNumberL && isNumberR) || compareType2 ltype rtype = (Just tBool, [])
-                | otherwise = (Nothing, errors ++ [(opName ++ "requires operands of the same type", loc)])
+                | otherwise = 
+                    (Nothing, [("'" ++ opName ++ "' requires operands of the same type", loc)])
 
-            gtLt = undefined
+            gtLt
+                | isNumberL && isNumberR = (Just tBool, [])
+                | otherwise = (Nothing, [("'" ++ opName ++ "' requires numeric operands", loc)])
+
+            subMulDiv
+                | isNumberL && isNumberR = (Just (if isFloatL || isFloatR then tFloat else tInt), [])
+                | otherwise = (Nothing, [("'" ++ opName ++ "' requires numeric operands", loc)])
+
+            opMod
+                | isIntL && isIntR = (Just tInt, [])
+                | otherwise = (Nothing, [("'%' requires 'Int' operands", loc)])
+
+            opAdd
+                | isNumberL && isNumberR = (Just (if isFloatL || isFloatR then tFloat else tInt), [])
+                | isStringL && isStringR = (Just tString, [])
+                | compareType2 ltype rtype = (ltype, []) -- checks for compatible array types
+                | isArrayL && isArrayR = (Nothing, [("Arrays contain different types", loc)])
+                | otherwise = (Nothing, [("'+' requires 'String', '[T]', Int or Float operands", loc)])
+
+            opIndex
+                | isArrayL && isIntR = (ltype, [])
+                | isArrayL && not isIntR = (Nothing, [("Index must be of type 'Int'", loc)])
+                | otherwise = (Nothing, [("Can't index data that's not an array", loc)])
 
             tBool = BaseType "Bool"
             isBoolL = compareType1 tBool ltype
@@ -87,6 +122,17 @@ checkBinaryExpr expr state = case expr of
             isIntL = compareType1 tInt ltype
             isIntR = compareType1 tInt rtype
 
+            tString = BaseType "String"
+            isStringL = compareType1 tString ltype
+            isStringR = compareType1 tString rtype
+
+            isArray t = case t of
+                Just (ArrayType _) -> True
+                _ -> False
+
+            isArrayL = isArray ltype
+            isArrayR = isArray rtype
+
             isNumberL = isFloatL || isIntL
             isNumberR = isFloatR || isIntR
 
@@ -95,6 +141,16 @@ checkBinaryExpr expr state = case expr of
                 OpAnd -> "and"
                 OpEq -> "=="
                 OpNeq -> "!="
+                OpGt -> ">"
+                OpLt -> "<"
+                OpGtEq -> ">="
+                OpLtEq -> "<="
+                OpSub -> "-"
+                OpMul -> "*"
+                OpDiv -> "/"
+                OpMod -> "%"
+                OpAdd -> "+"
+                OpIndex -> "[]"
     _ -> undefined
 
 checkUnaryExpr :: Expr -> TcState -> (Maybe Type, [Error])

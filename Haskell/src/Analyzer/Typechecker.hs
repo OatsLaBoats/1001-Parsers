@@ -18,11 +18,11 @@ typecheck s = foldr pred s (getTable s)
             in  appendErrors acc errors
 
 checkFunction :: Function -> FunctionMap -> [Error]
-checkFunction (Function _ _ params block _) functions =
+checkFunction (Function name _ params block _) functions =
     snd $ foldr pred (initialTable, []) block
     where
         pred stmt (table, errors) =
-            let (table', errors') = checkStmt stmt (functions, table)
+            let (table', errors') = checkStmt stmt (functions, table) name
             in  (table', errors ++ errors')
 
         initialTable = foldr 
@@ -30,9 +30,17 @@ checkFunction (Function _ _ params block _) functions =
             VT.empty 
             params
 
-checkStmt :: Stmt -> TcState -> (VarTable, [Error])
-checkStmt stmt state = case stmt of
+checkStmt :: Stmt -> TcState -> String -> (VarTable, [Error])
+checkStmt stmt state@(_, vars) funcName = case stmt of
     (VariableStmt _ _ _ _) -> checkVariableStmt stmt state
+    (ReturnStmt _ _) -> (vars, checkReturnStmt stmt state funcName)
+    _ -> undefined
+
+checkReturnStmt :: Stmt -> TcState -> String -> [Error]
+checkReturnStmt stmt (funcs, _) funcName = case stmt of
+    (ReturnStmt expr loc) -> undefined
+        where
+            func = fromJust $ M.lookup funcName funcs
     _ -> undefined
 
 checkVariableStmt :: Stmt -> TcState -> (VarTable, [Error])
@@ -44,7 +52,6 @@ checkVariableStmt stmt state@(_, table) = case stmt of
             else ( VT.defineVar name varType table
                  , exprErrors ++ [("Varible '" ++ name ++ "' doesn't match the assignment expression type", loc)]
                  )
-
     _ -> undefined
 
 checkExpr :: Expr -> TcState -> (Maybe Type, [Error])

@@ -37,10 +37,16 @@ checkStmt stmt state@(_, vars) funcName = case stmt of
     _ -> undefined
 
 checkReturnStmt :: Stmt -> TcState -> String -> [Error]
-checkReturnStmt stmt (funcs, _) funcName = case stmt of
-    (ReturnStmt expr loc) -> undefined
+checkReturnStmt stmt state@(funcs, _) funcName = case stmt of
+    (ReturnStmt expr loc) -> case retType of
+        Nothing -> [("Function '" ++ name ++ "' shouldn't have a 'return' statement", loc)]
+        Just rtype
+            | compareType1 rtype etype -> []
+            | otherwise -> 
+                exprErrors ++ [("'return' doesn't match the function '" ++ name ++ "' return type", loc)]
         where
-            func = fromJust $ M.lookup funcName funcs
+            (Function name retType _ _ _) = fromJust $ M.lookup funcName funcs
+            (etype, exprErrors) = checkExpr expr state
     _ -> undefined
 
 checkVariableStmt :: Stmt -> TcState -> (VarTable, [Error])

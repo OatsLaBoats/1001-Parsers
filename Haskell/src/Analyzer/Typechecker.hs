@@ -34,7 +34,12 @@ checkStmt :: Stmt -> TcState -> String -> (VarTable, [Error])
 checkStmt stmt state@(_, vars) funcName = case stmt of
     (VariableStmt _ _ _ _) -> checkVariableStmt stmt state
     (ReturnStmt _ _) -> (vars, checkReturnStmt stmt state funcName)
+    (PrintStmt expr) -> (vars, checkPrintStmt expr state)
     _ -> undefined
+
+checkPrintStmt :: Expr -> TcState -> [Error]
+checkPrintStmt expr state = 
+    let (_, errors) = checkExpr expr state in errors
 
 checkReturnStmt :: Stmt -> TcState -> String -> [Error]
 checkReturnStmt stmt state@(funcs, _) funcName = case stmt of

@@ -35,6 +35,7 @@ checkStmt stmt state@(_, vars) funcName = case stmt of
     (VariableStmt _ _ _ _) -> checkVariableStmt stmt state
     (ReturnStmt _ _) -> (vars, checkReturnStmt stmt state funcName)
     (PrintStmt expr) -> (vars, checkPrintStmt expr state)
+    (WhileStmt _ _ _) -> undefined
     _ -> undefined
 
 checkPrintStmt :: Expr -> TcState -> [Error]

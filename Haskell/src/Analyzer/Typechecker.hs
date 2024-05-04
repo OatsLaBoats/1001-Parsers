@@ -38,11 +38,12 @@ checkStmt :: Stmt -> TcState -> String -> (VarTable, [Error])
 checkStmt stmt state@(_, vars) funcName = case stmt of
     (VariableStmt _ _ _ _) -> checkVariableStmt stmt state
     (ReturnStmt _ _) -> (vars, checkReturnStmt stmt state funcName)
-    (PrintStmt expr) -> (vars, checkPrintStmt expr state)
+    (PrintStmt expr) -> (vars, checkExprStmt expr state)
     (WhileStmt _ _ _) -> (vars, checkWhileStmt stmt state funcName)
     (IfStmt _ _ _ _) -> (vars, checkIfStmt stmt state funcName "'if'")
     (AssignmentStmt _ _ _) -> (vars, checkAssignmentStmt stmt state)
     (IndexAssignmentStmt _ _ _ _) -> (vars, checkIndexAssignmentStmt stmt state)
+    (RawExprStmt expr) -> (vars, checkExprStmt expr state)
     _ -> undefined
 
 checkIndexAssignmentStmt :: Stmt -> TcState -> [Error]
@@ -61,7 +62,6 @@ checkIndexAssignmentStmt stmt state@(_, vars) = case stmt of
                 | otherwise = verror
             verror = [("Variable '" ++ name ++ "' doesn't match the assignment type", loc)]
     _ -> undefined
-
 
 checkAssignmentStmt :: Stmt -> TcState -> [Error]
 checkAssignmentStmt stmt state@(_, vars) = case stmt of
@@ -104,8 +104,8 @@ checkWhileStmt stmt state name = case stmt of
                 | otherwise = [("'while' conditional must be 'Bool'", loc)]
     _ -> undefined
 
-checkPrintStmt :: Expr -> TcState -> [Error]
-checkPrintStmt expr state = 
+checkExprStmt :: Expr -> TcState -> [Error]
+checkExprStmt expr state = 
     let (_, errors) = checkExpr expr state in errors
 
 checkReturnStmt :: Stmt -> TcState -> String -> [Error]

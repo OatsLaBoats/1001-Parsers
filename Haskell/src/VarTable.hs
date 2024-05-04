@@ -12,6 +12,9 @@ import qualified Data.Map as Map
 
 import Ast
 
+-- TODO: I don't think I am using the 'new' function and getParent field.
+--       Since haskell is immutable we don't need to have this whole child/parent reletation ship.
+
 data VarTable = VarTable 
     { getVars :: Map Name Type
     , getParent :: Maybe VarTable
@@ -19,6 +22,7 @@ data VarTable = VarTable
 
 type Name = String
 
+-- TODO: Rename to emptyVarTable
 empty :: VarTable
 empty = VarTable Map.empty Nothing
 

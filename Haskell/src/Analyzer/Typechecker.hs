@@ -40,6 +40,26 @@ checkStmt stmt state@(_, vars) funcName = case stmt of
     (ReturnStmt _ _) -> (vars, checkReturnStmt stmt state funcName)
     (PrintStmt expr) -> (vars, checkPrintStmt expr state)
     (WhileStmt _ _ _) -> (vars, checkWhileStmt stmt state funcName)
+    (IfStmt _ _ _ _) -> (vars, checkIfStmt stmt state funcName "'if'")
+    _ -> undefined
+
+type Keyword = String
+checkIfStmt :: Stmt -> TcState -> String -> Keyword -> [Error]
+checkIfStmt stmt state name keyword = case stmt of
+    (IfStmt expr block elseBranch loc) -> exprErrors ++ blockErrors ++ ifErrors ++ elseErrors
+        where
+            (etype, exprErrors) = checkExpr expr state
+            blockErrors = checkBlock block state name
+            ifErrors
+                | compareType1 (BaseType "Bool") etype = []
+                | otherwise = [(keyword ++ " conditional must be 'Bool'", loc)]
+            elseErrors = case elseBranch of
+                Nothing -> []
+                Just elseStmt -> case elseStmt of
+                    (ElifStmt expr' block' elseBranch' loc') -> 
+                        checkIfStmt (IfStmt expr' block' elseBranch' loc') state name "'elif'"
+                    (ElseStmt block') -> checkBlock block' state name
+                    _ -> undefined
     _ -> undefined
 
 checkWhileStmt :: Stmt -> TcState -> String -> [Error]

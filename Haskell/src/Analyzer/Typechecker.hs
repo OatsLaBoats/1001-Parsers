@@ -19,23 +19,38 @@ typecheck s = foldr pred s (getTable s)
 
 checkFunction :: Function -> FunctionMap -> [Error]
 checkFunction (Function name _ params block _) functions =
-    snd $ foldr pred (initialTable, []) block
+    checkBlock block (functions, initialTable) name
     where
-        pred stmt (table, errors) =
-            let (table', errors') = checkStmt stmt (functions, table) name
-            in  (table', errors ++ errors')
-
         initialTable = foldr 
             (\(Parameter name t _) acc -> VT.defineVar name t acc)
             VT.empty 
             params
+
+checkBlock :: Block -> TcState -> String -> [Error]
+checkBlock block (functions, vars) name =
+    snd $ foldr pred (vars, []) block
+    where
+        pred stmt (table, errors) =
+            let (table', errors') = checkStmt stmt (functions, table) name
+            in (table', errors ++ errors')
 
 checkStmt :: Stmt -> TcState -> String -> (VarTable, [Error])
 checkStmt stmt state@(_, vars) funcName = case stmt of
     (VariableStmt _ _ _ _) -> checkVariableStmt stmt state
     (ReturnStmt _ _) -> (vars, checkReturnStmt stmt state funcName)
     (PrintStmt expr) -> (vars, checkPrintStmt expr state)
-    (WhileStmt _ _ _) -> undefined
+    (WhileStmt _ _ _) -> (vars, checkWhileStmt stmt state funcName)
+    _ -> undefined
+
+checkWhileStmt :: Stmt -> TcState -> String -> [Error]
+checkWhileStmt stmt state name = case stmt of
+    (WhileStmt expr block loc) -> exprErrors ++ blockErrors ++ whileErrors
+        where
+            (etype, exprErrors) = checkExpr expr state
+            blockErrors = checkBlock block state name
+            whileErrors
+                | compareType1 (BaseType "Bool") etype = []
+                | otherwise = [("'while' conditional must be 'Bool'", loc)]
     _ -> undefined
 
 checkPrintStmt :: Expr -> TcState -> [Error]

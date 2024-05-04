@@ -41,6 +41,37 @@ checkStmt stmt state@(_, vars) funcName = case stmt of
     (PrintStmt expr) -> (vars, checkPrintStmt expr state)
     (WhileStmt _ _ _) -> (vars, checkWhileStmt stmt state funcName)
     (IfStmt _ _ _ _) -> (vars, checkIfStmt stmt state funcName "'if'")
+    (AssignmentStmt _ _ _) -> (vars, checkAssignmentStmt stmt state)
+    (IndexAssignmentStmt _ _ _ _) -> (vars, checkIndexAssignmentStmt stmt state)
+    _ -> undefined
+
+checkIndexAssignmentStmt :: Stmt -> TcState -> [Error]
+checkIndexAssignmentStmt stmt state@(_, vars) = case stmt of
+    (IndexAssignmentStmt name index expr loc) -> 
+        exprErrors ++ indexExprErrors ++ indexErrors ++ assignErrors
+        where
+            vtype = VT.getVar name vars
+            (itype, indexExprErrors) = checkExpr index state
+            (etype, exprErrors) = checkExpr expr state
+            indexErrors
+                | compareType1 (BaseType "Int") itype = []
+                | otherwise = verror
+            assignErrors
+                | compareType2 vtype etype = []
+                | otherwise = verror
+            verror = [("Variable '" ++ name ++ "' doesn't match the assignment type", loc)]
+    _ -> undefined
+
+
+checkAssignmentStmt :: Stmt -> TcState -> [Error]
+checkAssignmentStmt stmt state@(_, vars) = case stmt of
+    (AssignmentStmt name expr loc) -> exprErrors ++ assignErrors
+        where
+            vtype = VT.getVar name vars
+            (etype, exprErrors) = checkExpr expr state
+            assignErrors
+                | compareType2 vtype etype = []
+                | otherwise = [("Variable '" ++ name ++ "' doesn't match the assignment type", loc)]
     _ -> undefined
 
 type Keyword = String

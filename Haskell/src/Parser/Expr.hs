@@ -149,7 +149,7 @@ parseArrayLit acc tokens
     | otherwise = do
         (rest, expr) <- parseExpr tokens
         if match TkRBracket rest
-            then return (rest, reverse acc)
+            then return (rest, reverse $ expr : acc)
             else do
                 (rest, _) <- expect TkComma rest "Expected ',' after expression"
                 parseArrayLit (expr : acc) rest
@@ -160,7 +160,7 @@ parseCallParams acc tokens
     | otherwise = do
         (rest, expr) <- parseExpr tokens
         if match TkRParen rest
-            then return (rest, reverse acc)
+            then return (rest, reverse $ expr : acc)
             else do
                 (rest, _) <- expect TkComma rest "Expected ',' after expression"
                 parseCallParams (expr : acc) rest

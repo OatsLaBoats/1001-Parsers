@@ -8,6 +8,8 @@ import qualified VarTable as VT
 import qualified Data.Map as M
 import Data.Maybe
 
+-- TODO: Fix error order
+
 type TcState = (FunctionMap, VarTable)
 
 typecheck :: AnalyzerState -> AnalyzerState
@@ -54,13 +56,17 @@ checkIndexAssignmentStmt stmt state@(_, vars) = case stmt of
             vtype = VT.getVar name vars
             (itype, indexExprErrors) = checkExpr index state
             (etype, exprErrors) = checkExpr expr state
+
             indexErrors
                 | compareType1 (BaseType "Int") itype = []
-                | otherwise = verror
+                | otherwise = ierror
             assignErrors
-                | compareType2 vtype etype = []
-                | otherwise = verror
+                | compareType2 (getArrayInternal <$> vtype) etype = []
+                | otherwise = error $ show vtype -- verror
+                -- TODO: Continue debugging here. Seems 'arr' is not in the var table
+
             verror = [("Variable '" ++ name ++ "' doesn't match the assignment type", loc)]
+            ierror = [("Indexes can only be 'Int'", loc)]
     _ -> undefined
 
 checkAssignmentStmt :: Stmt -> TcState -> [Error]
@@ -270,10 +276,9 @@ checkCallExpr name params loc state@(funcs, _)
     | M.member name funcs =
         if lenDif > 0 then
             (Nothing, [("Too many arguments passed into function '" ++ name ++ "'", loc)])
-        else if lenDif < 0 then
+        else if lenDif < 0 then 
             (Nothing, [("Too few arguments passed into function '" ++ name ++ "'", loc)])
         else checkParams params params' loc [] 0
-
     | otherwise = (Nothing, [("Function '" ++ name ++ "' doesn't exist", loc)])
     where
         (Function _ retType params' _ _) = fromJust $ M.lookup name funcs
@@ -292,7 +297,7 @@ checkCallExpr name params loc state@(funcs, _)
             in if compareType1 ptype etype
             then checkParams xs ps l errs (i+1)
             else checkParams xs ps l 
-                (errs ++ errors ++ [("Type mismatch with argument " ++ show i, l)]) (i+1)
+                (errs ++ errors ++ [("Type mismatch with argument " ++ show i ++ " in call to '" ++ name ++ "'", l)]) (i+1)
 
 
 -- This one is a bit crazy. Unlike the odin implementation this one checks all the
@@ -308,11 +313,12 @@ checkArrayLit (expr:exprs) loc state =
         errorMessage = ("Multiple different types in array literal", loc)
 
         (firstType, errors) = checkExpr expr state
+        resultType = ArrayType <$> firstType
 
         -- Recursively goes through the expressions inside the literal and accumulates the errors.
         -- If an errors occurred or the errs accumulator already had errors in it then we will assume failure.
         -- May be possible to implement using fold.
-        check [] errs = (if null errs then firstType else Nothing, errors ++ errs)
+        check [] errs = (if null errs then resultType else Nothing, errors ++ errs)
         check (x:xs) errs =
             let (t, errors') = checkExpr x state
                 errs' = if compareType2 firstType t

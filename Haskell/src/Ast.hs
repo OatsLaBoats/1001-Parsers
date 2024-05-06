@@ -11,6 +11,7 @@ module Ast
     , BinaryOperator(..)
     , getFuncName
     , getFuncLoc
+    , getArrayInternal
     ) where
 
 import Error
@@ -22,6 +23,11 @@ data Type
     = BaseType String
     | ArrayType Type
     deriving (Show, Eq)
+
+getArrayInternal :: Type -> Type
+getArrayInternal t = case t of
+    BaseType _ -> t
+    ArrayType x -> x
 
 -- name returnType parameterList block loc
 data Function = Function Name (Maybe Type) [Parameter] Block Location deriving Show

@@ -8,6 +8,7 @@ import Error
 import Analyzer.Internal
 import Analyzer.Variables
 import Analyzer.MissingReturn
+import Analyzer.Typechecker
 
 analyze :: Ast -> [Error]
 analyze ast = getErrors
@@ -15,6 +16,7 @@ analyze ast = getErrors
     & validMainCheck
     & duplicateVariableCheck
     & missingReturnCheck
+    & typecheck
 
 duplicateFunctionCheck :: Ast -> AnalyzerState -> AnalyzerState
 duplicateFunctionCheck ast s = foldr predicate s ast

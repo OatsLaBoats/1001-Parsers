@@ -24,10 +24,10 @@ data Type
     | ArrayType Type
     deriving (Show, Eq)
 
-getArrayInternal :: Type -> Type
+getArrayInternal :: Type -> Maybe Type
 getArrayInternal t = case t of
-    BaseType _ -> t
-    ArrayType x -> x
+    BaseType _ -> Nothing
+    ArrayType x -> Just x
 
 -- name returnType parameterList block loc
 data Function = Function Name (Maybe Type) [Parameter] Block Location deriving Show

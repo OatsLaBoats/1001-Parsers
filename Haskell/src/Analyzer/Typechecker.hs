@@ -7,15 +7,16 @@ import VarTable (VarTable)
 import qualified VarTable as VT
 import qualified Data.Map as M
 import Data.Maybe
+import Debug.Trace
 
 -- TODO: Fix error order
 
 type TcState = (FunctionMap, VarTable)
 
 typecheck :: AnalyzerState -> AnalyzerState
-typecheck s = foldr pred s (getTable s)
+typecheck s = foldl pred s (getTable s)
     where
-        pred f acc =
+        pred acc f =
             let errors = checkFunction f (getTable acc)
             in  appendErrors acc errors
 
@@ -23,16 +24,16 @@ checkFunction :: Function -> FunctionMap -> [Error]
 checkFunction (Function name _ params block _) functions =
     checkBlock block (functions, initialTable) name
     where
-        initialTable = foldr 
-            (\(Parameter name t _) acc -> VT.defineVar name t acc)
+        initialTable = foldl
+            (\acc (Parameter name t _) -> VT.defineVar name t acc)
             VT.empty 
             params
 
 checkBlock :: Block -> TcState -> String -> [Error]
 checkBlock block (functions, vars) name =
-    snd $ foldr pred (vars, []) block
+    snd $ foldl pred (vars, []) block
     where
-        pred stmt (table, errors) =
+        pred (table, errors) stmt =
             let (table', errors') = checkStmt stmt (functions, table) name
             in (table', errors ++ errors')
 
@@ -53,6 +54,10 @@ checkIndexAssignmentStmt stmt state@(_, vars) = case stmt of
     (IndexAssignmentStmt name index expr loc) -> 
         exprErrors ++ indexExprErrors ++ indexErrors ++ assignErrors
         where
+            isArray t = case t of
+                Just (ArrayType _) -> True
+                _ -> False
+
             vtype = VT.getVar name vars
             (itype, indexExprErrors) = checkExpr index state
             (etype, exprErrors) = checkExpr expr state
@@ -61,11 +66,12 @@ checkIndexAssignmentStmt stmt state@(_, vars) = case stmt of
                 | compareType1 (BaseType "Int") itype = []
                 | otherwise = ierror
             assignErrors
-                | compareType2 (getArrayInternal <$> vtype) etype = []
-                | otherwise = error $ show vtype -- verror
-                -- TODO: Continue debugging here. Seems 'arr' is not in the var table
+                | not $ isArray vtype = aerror
+                | compareType2 (vtype >>= getArrayInternal) etype = []
+                | otherwise = verror
 
-            verror = [("Variable '" ++ name ++ "' doesn't match the assignment type", loc)]
+            aerror = [("Variable '" ++ name ++ "' is not an array", loc)]
+            verror = [("Variable '" ++ name ++ "' doesn't match the assigned type", loc)]
             ierror = [("Indexes can only be 'Int'", loc)]
     _ -> undefined
 
@@ -77,13 +83,13 @@ checkAssignmentStmt stmt state@(_, vars) = case stmt of
             (etype, exprErrors) = checkExpr expr state
             assignErrors
                 | compareType2 vtype etype = []
-                | otherwise = [("Variable '" ++ name ++ "' doesn't match the assignment type", loc)]
+                | otherwise = [("Variable '" ++ name ++ "' doesn't match the assigned type", loc)]
     _ -> undefined
 
 type Keyword = String
 checkIfStmt :: Stmt -> TcState -> String -> Keyword -> [Error]
 checkIfStmt stmt state name keyword = case stmt of
-    (IfStmt expr block elseBranch loc) -> exprErrors ++ blockErrors ++ ifErrors ++ elseErrors
+    (IfStmt expr block elseBranch loc) -> ifErrors ++ exprErrors ++ blockErrors ++ elseErrors
         where
             (etype, exprErrors) = checkExpr expr state
             blockErrors = checkBlock block state name
@@ -101,7 +107,7 @@ checkIfStmt stmt state name keyword = case stmt of
 
 checkWhileStmt :: Stmt -> TcState -> String -> [Error]
 checkWhileStmt stmt state name = case stmt of
-    (WhileStmt expr block loc) -> exprErrors ++ blockErrors ++ whileErrors
+    (WhileStmt expr block loc) -> whileErrors ++ exprErrors ++ blockErrors
         where
             (etype, exprErrors) = checkExpr expr state
             blockErrors = checkBlock block state name
@@ -132,9 +138,9 @@ checkVariableStmt stmt state@(_, table) = case stmt of
     (VariableStmt name varType expr loc) ->
         let (exprType, exprErrors) = checkExpr expr state
         in  if compareType1 varType exprType
-            then ( VT.defineVar name varType table, exprErrors )
+            then (VT.defineVar name varType table, exprErrors)
             else ( VT.defineVar name varType table
-                 , exprErrors ++ [("Varible '" ++ name ++ "' doesn't match the assignment expression type", loc)]
+                 , exprErrors ++ [("Variable '" ++ name ++ "' doesn't match the assigned type", loc)]
                  )
     _ -> undefined
 
@@ -192,7 +198,7 @@ checkBinaryExpr expr state = case expr of
             opAdd
                 | isNumberL && isNumberR = (Just (if isFloatL || isFloatR then tFloat else tInt), [])
                 | isStringL && isStringR = (Just tString, [])
-                | compareType2 ltype rtype = (ltype, []) -- checks for compatible array types
+                | isArrayL && isArrayR && compareType2 ltype rtype = (ltype, []) -- checks for compatible array types
                 | isArrayL && isArrayR = (Nothing, [("Arrays contain different types", loc)])
                 | otherwise = (Nothing, [("'+' requires 'String', '[T]', Int or Float operands", loc)])
 
@@ -275,9 +281,9 @@ checkCallExpr :: String -> [Expr] -> Location -> TcState -> (Maybe Type, [Error]
 checkCallExpr name params loc state@(funcs, _)
     | M.member name funcs =
         if lenDif > 0 then
-            (Nothing, [("Too many arguments passed into function '" ++ name ++ "'", loc)])
+            (retType, [("Too many arguments passed into function '" ++ name ++ "'", loc)])
         else if lenDif < 0 then 
-            (Nothing, [("Too few arguments passed into function '" ++ name ++ "'", loc)])
+            (retType, [("Too few arguments passed into function '" ++ name ++ "'", loc)])
         else checkParams params params' loc [] 0
     | otherwise = (Nothing, [("Function '" ++ name ++ "' doesn't exist", loc)])
     where
@@ -289,7 +295,7 @@ checkCallExpr name params loc state@(funcs, _)
         checkParams :: [Expr] -> [Parameter] -> Location -> [Error] -> Int -> (Maybe Type, [Error])
         checkParams [] [] _ errs _
             | null errs = (retType, errs)
-            | otherwise = (Nothing, errs)
+            | otherwise = (retType, errs)
         checkParams [] _ _ _ _ = undefined -- Unreachable
         checkParams _ [] _ _ _ = undefined -- Unreachable
         checkParams (x:xs) ((Parameter _ ptype _):ps) l errs i =
@@ -297,7 +303,7 @@ checkCallExpr name params loc state@(funcs, _)
             in if compareType1 ptype etype
             then checkParams xs ps l errs (i+1)
             else checkParams xs ps l 
-                (errs ++ errors ++ [("Type mismatch with argument " ++ show i ++ " in call to '" ++ name ++ "'", l)]) (i+1)
+                (errs ++ errors ++ [("Type mismatch with argument " ++ show (i + 1) ++ " in call to '" ++ name ++ "'", l)]) (i+1)
 
 
 -- This one is a bit crazy. Unlike the odin implementation this one checks all the
@@ -305,7 +311,7 @@ checkCallExpr name params loc state@(funcs, _)
 checkArrayLit :: [Expr] -> Location -> TcState -> (Maybe Type, [Error])
 checkArrayLit [] _ _ = (Nothing, [])
 checkArrayLit (expr:exprs) loc state =
-    let result@(t, es) = check exprs []
+    let result@(t, es) = check exprs [] False
     in case t of
         Nothing -> (t, errorMessage : es)
         _ -> result
@@ -318,13 +324,13 @@ checkArrayLit (expr:exprs) loc state =
         -- Recursively goes through the expressions inside the literal and accumulates the errors.
         -- If an errors occurred or the errs accumulator already had errors in it then we will assume failure.
         -- May be possible to implement using fold.
-        check [] errs = (if null errs then resultType else Nothing, errors ++ errs)
-        check (x:xs) errs =
+        check [] errs hadError = (if hadError then Nothing else resultType, errors ++ errs)
+        check (x:xs) errs hadError =
             let (t, errors') = checkExpr x state
-                errs' = if compareType2 firstType t
-                        then errs
-                        else errs ++ errors'
-            in check xs errs'
+                (errs', hadError') = if compareType2 firstType t
+                        then (errs, hadError)
+                        else (errs ++ errors', True)
+            in check xs errs' hadError'
 
 compareType1 :: Type -> Maybe Type -> Bool
 compareType1 t1 m = case m of

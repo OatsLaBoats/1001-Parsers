@@ -7,9 +7,6 @@ import VarTable (VarTable)
 import qualified VarTable as VT
 import qualified Data.Map as M
 import Data.Maybe
-import Debug.Trace
-
--- TODO: Fix error order
 
 type TcState = (FunctionMap, VarTable)
 

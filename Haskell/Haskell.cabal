@@ -76,7 +76,10 @@ executable Haskell
         Analyzer.Variables,
         Analyzer.MissingReturn,
         Analyzer.Typechecker,
-        VarTable
+        VarTable,
+        Interpreter,
+        Interpreter.Expr,
+        Interpreter.Value
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

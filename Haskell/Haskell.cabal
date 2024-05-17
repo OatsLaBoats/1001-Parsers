@@ -78,8 +78,7 @@ executable Haskell
         Analyzer.Typechecker,
         VarTable,
         Interpreter,
-        Interpreter.Expr,
-        Interpreter.Value
+        Interpreter.Internal,
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

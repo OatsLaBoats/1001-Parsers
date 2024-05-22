@@ -8,7 +8,6 @@ module Interpreter.Internal
 import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.Maybe
-import GHC.Float
 import Ast
 import Interpreter.Value
 
@@ -65,14 +64,14 @@ evalBinaryExpr expr env scope = case op of
     OpNeq -> BoolValue . not . extractBool <$> opEq
     OpGt -> simpleOp BoolValue id gtValues
     OpLt -> simpleOp BoolValue id ltValues
-    OpGtEq -> undefined
-    OpLtEq -> undefined
-    OpAdd -> undefined
-    OpSub -> undefined
-    OpMul -> undefined
-    OpDiv -> undefined
-    OpMod -> undefined
-    OpIndex -> undefined
+    OpGtEq -> simpleOp BoolValue id gtEqValues
+    OpLtEq -> simpleOp BoolValue id ltEqValues
+    OpAdd -> simpleOp id id addValues
+    OpSub -> simpleOp id id subValues
+    OpMul -> simpleOp id id mulValues
+    OpDiv -> simpleOp id id divValues
+    OpMod -> simpleOp IntValue extractInt mod
+    OpIndex -> liftA2 (\v1 v2 -> (extractArray v1) !! (extractInt v2)) lhs rhs
     where
         (op, lhs', rhs') = case expr of
             BinaryExpr op lhs rhs _ -> (op, lhs, rhs)
@@ -85,45 +84,6 @@ evalBinaryExpr expr env scope = case op of
 
         simpleOp constructor extractor operator =
             liftA2 (\v1 v2 -> constructor $ extractor v1 `operator` extractor v2) lhs rhs
-
-        -- NOTE: This is beyong scuffed, I'm near certain that there is an abstraction
-        --       which solves this more elegantly but I can't think of it right now.
-        ltValues v1 v2 = case v1 of
-            IntValue v1' -> case v2 of
-                IntValue v2' -> v1' < v2'
-                FloatValue v2' -> (int2Float v1') < v2'
-                _ -> undefined
-            FloatValue v1' -> case v2 of
-                FloatValue v2' -> v1' < v2'
-                IntValue v2' -> v1' < (int2Float v2')
-                _ -> undefined
-            _ -> undefined
-
-        gtValues v1 v2 = case v1 of
-            IntValue v1' -> case v2 of
-                IntValue v2' -> v1' > v2'
-                FloatValue v2' -> (int2Float v1') > v2'
-                _ -> undefined
-            FloatValue v1' -> case v2 of
-                FloatValue v2' -> v1' > v2'
-                IntValue v2' -> v1' > (int2Float v2')
-                _ -> undefined
-            _ -> undefined
-
-        eqValues v1 v2 = case v1 of
-            IntValue v1' -> case v2 of
-                IntValue v2' -> v1' == v2'
-                FloatValue v2' -> (int2Float v1') == v2'
-                _ -> undefined
-            FloatValue v1' -> case v2 of
-                IntValue v2' -> v1' == (int2Float v2')
-                FloatValue v2' -> v1' == v2'
-                _ -> undefined
-            BoolValue v1' -> v1' == (extractBool v2)
-            StringValue v1' -> v1' == (extractString v2)
-            ArrayValue v1' -> v1' == (extractArray v2)
-            NilValue -> undefined
-
 
 evalUnaryExpr :: Expr -> Environment -> Scope -> IO Value
 evalUnaryExpr expr env scope = case op of

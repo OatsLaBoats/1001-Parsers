@@ -27,27 +27,70 @@ call fname env params
         builtin = undefined
 
 evalFunction :: Function -> Environment -> [Value] -> IO Value
-evalFunction (Function name _ fparams block _) env params =
-    evalBlock block env scope
+evalFunction (Function _ _ fparams block _) env params = do
+    (value, _) <- evalBlock block env scope
+    pure value
     where
         scope = foldr pred Map.empty (zip fparams params)
         pred ((Parameter name _ _), value) acc = Map.insert name value acc
 
-evalBlock :: Block -> Environment -> Scope -> IO Value
-evalBlock block env scope = loop block env scope Nothing
+evalBlock :: Block -> Environment -> Scope -> IO (Value, Scope)
+evalBlock block env scope = loop block scope
     where
-        loop [] _ _ _ = pure NilValue
-        loop _ _ _ (Just retVal) = pure retVal
-        loop (s:stmts) env scope _ = case s of
-            VariableStmt _ _ _ _-> do
-                scope' <- evalVariableStmt s env scope
-                loop stmts env scope' Nothing
+        loop [] scope = pure (NilValue, scope)
+        loop (s:stmts) scope = case s of
+            VariableStmt _ _ _ _-> evalVariableStmt s env scope >>= loop stmts
+            ReturnStmt expr _ -> evalExpr expr env scope >>= pure . (,scope)
+            PrintStmt expr -> evalExpr expr env scope >>= putStrLn . show >> loop stmts scope
+            WhileStmt _ _ _ -> do 
+                (value, scope') <- evalWhileStmt s env scope
+                if isNil value
+                then loop stmts scope'
+                else pure (value, scope')
+            AssignmentStmt _ _ _ -> evalAssignmentStmt s env scope >>= loop stmts
+            IndexAssignmentStmt _ _ _ _ -> evalIndexAssignmentStmt s env scope >>= loop stmts
+
+evalIndexAssignmentStmt :: Stmt -> Environment -> Scope -> IO Scope
+evalIndexAssignmentStmt stmt env scope = case stmt of
+    IndexAssignmentStmt name indexExpr expr _ -> do
+        index <- evalExpr indexExpr env scope
+        value <- evalExpr expr env scope
+        let var = extractArray . fromJust $ Map.lookup name scope
+        let newVar = insertAt (extractInt index) value var
+        pure $ Map.insert name (ArrayValue newVar) scope
+    _ -> undefined
+
+insertAt :: Int -> a -> [a] -> [a]
+insertAt index item list = listA <> (item : listB)
+    where
+        (listA, listB) = splitAt index list
+
+evalAssignmentStmt :: Stmt -> Environment -> Scope -> IO Scope
+evalAssignmentStmt stmt env scope = case stmt of
+    AssignmentStmt name expr _ -> do
+        value <- evalExpr expr env scope
+        pure $ Map.insert name value scope
+    _ -> undefined
+
+-- NOTE: This can leak vars outside of their scope so keep that in mind even though it might not matter because of static analysis.
+--       For future projects you sould use a parent/child scope system similar to the odin version.
+evalWhileStmt :: Stmt -> Environment -> Scope -> IO (Value, Scope)
+evalWhileStmt stmt env scope = case stmt of
+    WhileStmt expr block _ -> do
+        cond <- evalExpr expr env scope
+        if extractBool cond then do
+            (retVal, scope') <- evalBlock block env scope
+            if not $ isNil retVal
+            then pure (retVal, scope')
+            else evalWhileStmt stmt env scope'
+        else pure (NilValue, scope)
+    _ -> undefined
 
 evalVariableStmt :: Stmt -> Environment -> Scope -> IO Scope
 evalVariableStmt stmt env scope = case stmt of
     VariableStmt name _ expr _ -> do
         value <- evalExpr expr env scope
-        return $ Map.insert name value scope
+        pure $ Map.insert name value scope
     _ -> undefined
 
 evalExpr :: Expr -> Environment -> Scope -> IO Value

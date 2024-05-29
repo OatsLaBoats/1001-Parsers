@@ -1,5 +1,6 @@
 module Interpreter.Value 
     ( Value(..)
+    , isNil
     , extractInt
     , extractFloat
     , extractBool
@@ -27,6 +28,11 @@ data Value
     | NilValue
     deriving Eq
 
+isNil :: Value -> Bool
+isNil value = case value of
+    NilValue -> True
+    _ -> False
+
 extractInt :: Value -> Int
 extractInt value = case value of
     IntValue v -> v
@@ -51,6 +57,20 @@ extractArray :: Value -> [Value]
 extractArray value = case value of
     ArrayValue v -> v
     _ -> undefined
+
+instance Show Value where
+    show value = case value of
+        IntValue v -> show v
+        FloatValue v -> show v
+        BoolValue v -> show v
+        StringValue v -> '"' : v ++ "\""
+        ArrayValue v -> showArray v True
+        NilValue -> undefined
+        where
+            showArray [] _ = "]"
+            showArray (x:xs) start
+                | start = "[" ++ show x ++ showArray xs False
+                | otherwise = ", " ++ show x ++ showArray xs False
 
 divValues :: Value -> Value -> Value
 divValues v1 v2 = case v1 of

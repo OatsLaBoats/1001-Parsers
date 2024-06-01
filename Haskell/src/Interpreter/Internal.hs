@@ -8,6 +8,7 @@ module Interpreter.Internal
 import qualified Data.Map as Map
 import Data.Map (Map)
 import Data.Maybe
+import Data.Functor
 import Ast
 import Interpreter.Value
 
@@ -27,28 +28,48 @@ call fname env params
         builtin = undefined
 
 evalFunction :: Function -> Environment -> [Value] -> IO Value
-evalFunction (Function _ _ fparams block _) env params = do
-    (value, _) <- evalBlock block env scope
-    pure value
+evalFunction (Function _ _ fparams block _) env params = 
+    evalBlock block env scope <&> fst
     where
         scope = foldr pred Map.empty (zip fparams params)
-        pred ((Parameter name _ _), value) acc = Map.insert name value acc
+        pred (Parameter name _ _, value) = Map.insert name value
 
 evalBlock :: Block -> Environment -> Scope -> IO (Value, Scope)
 evalBlock block env scope = loop block scope
     where
         loop [] scope = pure (NilValue, scope)
         loop (s:stmts) scope = case s of
-            VariableStmt _ _ _ _-> evalVariableStmt s env scope >>= loop stmts
-            ReturnStmt expr _ -> evalExpr expr env scope >>= pure . (,scope)
-            PrintStmt expr -> evalExpr expr env scope >>= putStrLn . show >> loop stmts scope
-            WhileStmt _ _ _ -> do 
+            VariableStmt {} -> evalVariableStmt s env scope >>= loop stmts
+            ReturnStmt expr _ -> evalExpr expr env scope <&> (,scope)
+            PrintStmt expr -> evalExpr expr env scope >>= print >> loop stmts scope
+            WhileStmt {} -> do 
                 (value, scope') <- evalWhileStmt s env scope
                 if isNil value
                 then loop stmts scope'
                 else pure (value, scope')
-            AssignmentStmt _ _ _ -> evalAssignmentStmt s env scope >>= loop stmts
-            IndexAssignmentStmt _ _ _ _ -> evalIndexAssignmentStmt s env scope >>= loop stmts
+            IfStmt {} -> do
+                (value, scope') <- evalIfStmt s env scope
+                if isNil value
+                then loop stmts scope'
+                else pure (value, scope')
+            AssignmentStmt {} -> evalAssignmentStmt s env scope >>= loop stmts
+            IndexAssignmentStmt {} -> evalIndexAssignmentStmt s env scope >>= loop stmts
+            RawExprStmt expr -> evalExpr expr env scope >> loop stmts scope
+            _ -> undefined
+
+evalIfStmt :: Stmt -> Environment -> Scope -> IO (Value, Scope)
+evalIfStmt stmt env scope = case stmt of
+    IfStmt expr block elseStmt _ -> do
+        cond <- evalExpr expr env scope
+        if extractBool cond
+        then evalBlock block env scope
+        else case elseStmt of
+            Just stmt' -> evalIfStmt stmt' env scope
+            Nothing -> pure (NilValue, scope)
+    ElifStmt expr block elseStmt loc -> 
+        evalIfStmt (IfStmt expr block elseStmt loc) env scope
+    ElseStmt block -> evalBlock block env scope
+    _ -> undefined
 
 evalIndexAssignmentStmt :: Stmt -> Environment -> Scope -> IO Scope
 evalIndexAssignmentStmt stmt env scope = case stmt of
@@ -95,8 +116,8 @@ evalVariableStmt stmt env scope = case stmt of
 
 evalExpr :: Expr -> Environment -> Scope -> IO Value
 evalExpr expr env scope = case expr of
-    BinaryExpr _ _ _ _ -> evalBinaryExpr expr env scope
-    UnaryExpr _ _ _ -> evalUnaryExpr expr env scope
+    BinaryExpr {} -> evalBinaryExpr expr env scope
+    UnaryExpr {} -> evalUnaryExpr expr env scope
     PrimaryExpr pexpr -> evalPrimaryExpr pexpr env scope
 
 evalBinaryExpr :: Expr -> Environment -> Scope -> IO Value
@@ -114,7 +135,7 @@ evalBinaryExpr expr env scope = case op of
     OpMul -> simpleOp id id mulValues
     OpDiv -> simpleOp id id divValues
     OpMod -> simpleOp IntValue extractInt mod
-    OpIndex -> liftA2 (\v1 v2 -> (extractArray v1) !! (extractInt v2)) lhs rhs
+    OpIndex -> liftA2 (\v1 v2 -> extractArray v1 !! extractInt v2) lhs rhs
     where
         (op, lhs', rhs') = case expr of
             BinaryExpr op lhs rhs _ -> (op, lhs, rhs)
@@ -130,8 +151,8 @@ evalBinaryExpr expr env scope = case op of
 
 evalUnaryExpr :: Expr -> Environment -> Scope -> IO Value
 evalUnaryExpr expr env scope = case op of
-    OpNeg -> negateValue <$> (evalExpr expr' env scope)
-    OpNot -> notValue <$> (evalExpr expr' env scope)
+    OpNeg -> negateValue <$> evalExpr expr' env scope
+    OpNot -> notValue <$> evalExpr expr' env scope
     where
         (op, expr') = case expr of
             UnaryExpr op expr' _ -> (op, expr')
@@ -155,5 +176,5 @@ evalPrimaryExpr expr env scope = case expr of
     StringLit value -> pure $ StringValue value
     AccessExpr varName _ -> pure $ fromJust $ Map.lookup varName scope
     ParenExpr expr' -> evalExpr expr' env scope
-    ArrayLit exprs _ -> mapM (\e -> evalExpr e env scope) exprs >>= pure . ArrayValue
+    ArrayLit exprs _ -> mapM (\e -> evalExpr e env scope) exprs <&> ArrayValue
     CallExpr funcName params _ -> mapM (\e -> evalExpr e env scope) params >>= call funcName env

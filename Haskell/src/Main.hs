@@ -4,11 +4,13 @@ import System.Environment
 import System.Exit
 import System.Directory
 import Data.List
+import Control.Monad
 import qualified Error
 import qualified Lexer
 import qualified Parser
 import qualified Ast.Display as D
 import qualified Analyzer
+import qualified Interpreter
 
 -- TODO: Maybe use a monad transformer with IO to handle early return
 
@@ -16,13 +18,13 @@ main :: IO ()
 main = do
     args1 <- getArgs
     print args1
-    let args = ["../a.sigma", "--print-tokens", "--print-ast"]
+    let args = ["../test.sigma"]
 
     case validateArgs args of
         [] -> return ()
         xs -> do
             mapM_ putStrLn xs
-            exitWith $ ExitFailure 1
+            exitFailure
     
     let showHelp = "--help" `elem` args
         printAll = "--print-all" `elem` args
@@ -33,7 +35,7 @@ main = do
         
     print (showHelp, printAll, printTokens, printAst, enableOptimizations, onlyCompile)
 
-    if showHelp then do
+    when showHelp $ do
         putStrLn "Usage: sigma [options...] \"source file\"\n\
                  \Options:\n\
                  \         --help          Displays this message.\n\
@@ -42,49 +44,48 @@ main = do
                  \         --print-all     Enables all printing functionality.\n\
                  \         --fast          Enables optimization.\n\
                  \         --only-compile  Compiles the script without running it."
-        exitWith ExitSuccess
-    else return ()
+        exitSuccess
 
     let sourceFile =
             case filter (isSuffixOf ".sigma") args of
                 [] -> ""
                 (sf : _) -> sf
 
-    if null sourceFile
-        then raiseError "Error: No source file provided"
-        else return ()
+    when (null sourceFile) $
+        raiseError "Error: No source file provided"
 
     fileExists <- doesFileExist sourceFile
-    if not fileExists 
-        then raiseError $ "Error: File \"" ++ sourceFile ++ "\" doesn't exist"
-        else return ()
+    unless fileExists $
+        raiseError $ "Error: File \"" ++ sourceFile ++ "\" doesn't exist"
 
     source <- readFile sourceFile
     tokens <- case Lexer.scan source of
-        Left errors -> do
-            mapM_ putStrLn (map Error.makeErrorMessage errors)
-            exitWith $ ExitFailure 1
         Right tokens -> return tokens
+        Left errors -> do
+            mapM_ (putStrLn . Error.makeErrorMessage) errors
+            exitFailure
 
     ast <- case Parser.parse tokens of
+        Right tree -> return tree
         Left e -> do
             putStrLn $ Error.makeErrorMessage e
-            exitWith $ ExitFailure 1
-        Right tree -> return tree
+            exitFailure
     
     let analyzerErrors = Analyzer.analyze ast
-    if not . null $ analyzerErrors then do
-        mapM_ putStrLn (map Error.makeErrorMessage analyzerErrors)
-        exitWith $ ExitFailure 1
-    else return ()
+    unless (null analyzerErrors) $ do
+        mapM_ (putStrLn . Error.makeErrorMessage) analyzerErrors
+        exitFailure
     
-    if printTokens
-        then mapM_ putStrLn (map show tokens)
-        else return ()
+    when printTokens $
+        mapM_ print tokens
     
-    if printAst
-        then putStrLn $ D.displayAst ast
-        else return ()
+    when printAst $
+        putStrLn $ D.displayAst ast
+
+    unless onlyCompile $ do
+        exitCode <- Interpreter.eval ast
+        print exitCode
+        when (exitCode /= 0) $ exitWith $ ExitFailure exitCode
 
 raiseError :: String -> IO ()                   
 raiseError s = do

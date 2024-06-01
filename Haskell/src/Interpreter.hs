@@ -7,11 +7,13 @@ module Interpreter
     ) where
 
 import qualified Data.Map as Map
+import Data.Functor
 import Ast
 import Interpreter.Internal
+import Interpreter.Value
 
 eval :: Ast -> IO Int
-eval ast = return 0
+eval ast = call "main" env [] <&> extractInt
     where
         env = setupEnv ast
 

@@ -22,7 +22,7 @@ duplicateFunctionCheck :: Ast -> AnalyzerState -> AnalyzerState
 duplicateFunctionCheck ast s = foldr predicate s ast
     where
         predicate f acc
-            | fid `Map.member` tab = acc { getErrors = (errMsg, floc) : (getErrors s) }
+            | fid `Map.member` tab = acc { getErrors = (errMsg, floc) : getErrors s }
             | otherwise = acc { getTable = Map.insert fid f tab }
             where 
                 fid = getFuncName f
@@ -32,7 +32,7 @@ duplicateFunctionCheck ast s = foldr predicate s ast
 
 validMainCheck :: AnalyzerState -> AnalyzerState
 validMainCheck s = case entrypoint of
-    Nothing -> s { getErrors = ("Missing 'main' function", (-1, -1)) : (getErrors s) }
+    Nothing -> s { getErrors = ("Missing 'main' function", (-1, -1)) : getErrors s }
     Just (Function _ retType params _ loc) ->
         arityCheck params loc s &
         returnTypeCheck retType loc &
@@ -43,8 +43,8 @@ validMainCheck s = case entrypoint of
         
         arityCheck params loc s
             | null params = s
-            | otherwise = s { getErrors = ("'main' should have no parameters", loc) : (getErrors s) }
+            | otherwise = s { getErrors = ("'main' should have no parameters", loc) : getErrors s }
         
         returnTypeCheck rt loc s
-            | rt `isReturnType` (BaseType "Int") = s
-            | otherwise = s { getErrors = ("'main' should have a return type of 'Int'", loc) : (getErrors s) }
+            | rt `isReturnType` BaseType "Int" = s
+            | otherwise = s { getErrors = ("'main' should have a return type of 'Int'", loc) : getErrors s }

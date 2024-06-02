@@ -36,14 +36,14 @@ checkBlock block (functions, vars) name =
 
 checkStmt :: Stmt -> TcState -> String -> (VarTable, [Error])
 checkStmt stmt state@(_, vars) funcName = case stmt of
-    (VariableStmt _ _ _ _) -> checkVariableStmt stmt state
-    (ReturnStmt _ _) -> (vars, checkReturnStmt stmt state funcName)
-    (PrintStmt expr) -> (vars, checkExprStmt expr state)
-    (WhileStmt _ _ _) -> (vars, checkWhileStmt stmt state funcName)
-    (IfStmt _ _ _ _) -> (vars, checkIfStmt stmt state funcName "'if'")
-    (AssignmentStmt _ _ _) -> (vars, checkAssignmentStmt stmt state)
-    (IndexAssignmentStmt _ _ _ _) -> (vars, checkIndexAssignmentStmt stmt state)
-    (RawExprStmt expr) -> (vars, checkExprStmt expr state)
+    VariableStmt {} -> checkVariableStmt stmt state
+    ReturnStmt {} -> (vars, checkReturnStmt stmt state funcName)
+    PrintStmt expr -> (vars, checkExprStmt expr state)
+    WhileStmt {} -> (vars, checkWhileStmt stmt state funcName)
+    IfStmt {} -> (vars, checkIfStmt stmt state funcName "'if'")
+    AssignmentStmt {} -> (vars, checkAssignmentStmt stmt state)
+    IndexAssignmentStmt {} -> (vars, checkIndexAssignmentStmt stmt state)
+    RawExprStmt expr -> (vars, checkExprStmt expr state)
     _ -> undefined
 
 checkIndexAssignmentStmt :: Stmt -> TcState -> [Error]
@@ -143,9 +143,9 @@ checkVariableStmt stmt state@(_, table) = case stmt of
 
 checkExpr :: Expr -> TcState -> (Maybe Type, [Error])
 checkExpr expr state = case expr of
-    (BinaryExpr _ _ _ _) -> checkBinaryExpr expr state
-    (UnaryExpr _ _ _) -> checkUnaryExpr expr state
-    (PrimaryExpr pexpr) -> checkPrimaryExpr pexpr state
+    BinaryExpr {} -> checkBinaryExpr expr state
+    UnaryExpr {} -> checkUnaryExpr expr state
+    PrimaryExpr pexpr -> checkPrimaryExpr pexpr state
 
 checkBinaryExpr :: Expr -> TcState -> (Maybe Type, [Error])
 checkBinaryExpr expr state = case expr of
@@ -200,7 +200,7 @@ checkBinaryExpr expr state = case expr of
                 | otherwise = (Nothing, [("'+' requires 'String', '[T]', Int or Float operands", loc)])
 
             opIndex
-                | isArrayL && isIntR = (ltype, [])
+                | isArrayL && isIntR = (ltype >>= getArrayInternal, [])
                 | isArrayL && not isIntR = (Nothing, [("Index must be of type 'Int'", loc)])
                 | otherwise = (Nothing, [("Can't index data that's not an array", loc)])
 

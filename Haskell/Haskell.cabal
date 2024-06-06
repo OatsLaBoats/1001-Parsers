@@ -79,7 +79,8 @@ executable Haskell
         VarTable,
         Interpreter,
         Interpreter.Internal,
-        Interpreter.Value
+        Interpreter.Value,
+        Optimizer
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

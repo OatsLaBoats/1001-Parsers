@@ -11,8 +11,7 @@ import qualified Parser
 import qualified Ast.Display as D
 import qualified Analyzer
 import qualified Interpreter
-
--- TODO: Maybe use a monad transformer with IO to handle early return
+import qualified Optimizer
 
 main :: IO ()
 main = do
@@ -33,8 +32,6 @@ main = do
         enableOptimizations = "--fast" `elem` args
         onlyCompile = "--only-compile" `elem` args
         
-    print (showHelp, printAll, printTokens, printAst, enableOptimizations, onlyCompile)
-
     when showHelp $ do
         putStrLn "Usage: sigma [options...] \"source file\"\n\
                  \Options:\n\
@@ -81,9 +78,13 @@ main = do
     
     when printAst $
         putStrLn $ D.displayAst ast
+    
+    let optimizedAst = if enableOptimizations then 
+            Optimizer.runTailcallPass ast
+        else ast
 
     unless onlyCompile $ do
-        exitCode <- Interpreter.eval ast
+        exitCode <- Interpreter.eval optimizedAst
         print exitCode
         when (exitCode /= 0) $ exitWith $ ExitFailure exitCode
 

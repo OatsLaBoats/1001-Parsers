@@ -41,12 +41,12 @@ displayStmt stmt i = case stmt of
         indent i ++ "<IfStmt>\n" ++
         indent (i+1) ++ "condition:\n" ++ displayExpr cond (i+2) ++
         displayBlock block (i+1) ++
-        ifJust (\s -> displayStmt s i) next ""
+        ifJust (`displayStmt` i) next ""
     (ElifStmt cond block next _) ->
         indent i ++ "<ElifStmt>\n" ++
         indent (i+1) ++ "condition:\n" ++ displayExpr cond (i+2) ++
         displayBlock block (i+1) ++
-        ifJust (\s -> displayStmt s i) next ""
+        ifJust (`displayStmt` i) next ""
     (ElseStmt block) ->
         indent i ++ "<ElseStmt>\n" ++
         displayBlock block (i+1)
@@ -128,7 +128,7 @@ ifJust _ Nothing alt = alt
 ifJust f (Just x) _  = f x
 
 ifType :: (Type -> String) -> Maybe Type -> String
-ifType _ (Nothing) = ""
+ifType _ Nothing = ""
 ifType f (Just t)  = f t
 
 doIf :: (() -> String) -> Bool -> String

@@ -1,6 +1,8 @@
 module Analyzer.Internal 
     ( AnalyzerState(..)
+    , Builtin(..)
     , FunctionMap
+    , BuiltinMap
     , isReturnType
     , appendErrors
     ) where
@@ -9,10 +11,14 @@ import Data.Map (Map)
 import Error
 import Ast
 
+data Builtin = Builtin [Type] (Maybe Type)
+
 type FunctionMap = Map String Function
+type BuiltinMap = Map String Builtin
 
 data AnalyzerState = AnalyzerState
-    { getTable :: FunctionMap
+    { getTable :: FunctionMap -- TODO: Maybe rename?
+    , getBuiltins :: BuiltinMap
     , getErrors :: [Error]
     }
     

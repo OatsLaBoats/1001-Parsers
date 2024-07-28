@@ -16,7 +16,8 @@ duplicateVariableCheck s = foldr pred s (getTable s)
             let (nf, errs) = checkFunction f
             in  AnalyzerState 
                     (Map.insert (getFuncName nf) nf (getTable acc))
-                    ((getErrors acc) ++ errs)
+                    (getBuiltins acc)
+                    (getErrors acc ++ errs)
 
 checkFunction :: Function -> (Function, [Error])
 checkFunction (Function name retType params block loc) =

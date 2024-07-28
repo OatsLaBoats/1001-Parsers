@@ -4,9 +4,9 @@ module Lexer
     , scan
     ) where
 
--- TODO: Maybe use combinators
 -- TODO: Fix column tracking bug
 -- TODO: Try writer monad maybe
+-- TODO: Refactor/Rewrite
 
 import Data.Char
 import Error
@@ -64,8 +64,7 @@ data Token = Token
     { getTokenKind :: TokenKind
     , getTokenLexeme :: Lexeme
     , getTokenLocation :: Location
-    }
-    deriving Show
+    } deriving Show
 
 scan :: Source -> Either [Error] [Token]
 scan src = 
@@ -185,7 +184,7 @@ scanIdentifier_ startLocation s src ident = case src of
             where identifier = reverse ident
  
 isIdentifierStartChar :: Char -> Bool
-isIdentifierStartChar c = c `elem` (concat [['A'..'Z'], ['a'..'z'], ['_']])       
+isIdentifierStartChar c = c `elem` concat [['A'..'Z'], ['a'..'z'], ['_']]
 
 isIdentifierChar :: Char -> Bool
 isIdentifierChar c = isIdentifierStartChar c || isDigit c

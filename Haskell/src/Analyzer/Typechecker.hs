@@ -8,18 +8,18 @@ import qualified VarTable as VT
 import qualified Data.Map as M
 import Data.Maybe
 
-type TcState = (FunctionMap, VarTable)
+type TcState = (FunctionMap, BuiltinMap, VarTable)
 
 typecheck :: AnalyzerState -> AnalyzerState
 typecheck s = foldl pred s (getTable s)
     where
         pred acc f =
-            let errors = checkFunction f (getTable acc)
+            let errors = checkFunction f (getTable acc) (getBuiltins acc)
             in  appendErrors acc errors
 
-checkFunction :: Function -> FunctionMap -> [Error]
-checkFunction (Function name _ params block _) functions =
-    checkBlock block (functions, initialTable) name
+checkFunction :: Function -> FunctionMap -> BuiltinMap -> [Error]
+checkFunction (Function name _ params block _) functions builtins =
+    checkBlock block (functions, builtins, initialTable) name
     where
         initialTable = foldl
             (\acc (Parameter name t _) -> VT.defineVar name t acc)
@@ -27,15 +27,15 @@ checkFunction (Function name _ params block _) functions =
             params
 
 checkBlock :: Block -> TcState -> String -> [Error]
-checkBlock block (functions, vars) name =
+checkBlock block (functions, builtins, vars) name =
     snd $ foldl pred (vars, []) block
     where
         pred (table, errors) stmt =
-            let (table', errors') = checkStmt stmt (functions, table) name
+            let (table', errors') = checkStmt stmt (functions, builtins, table) name
             in (table', errors ++ errors')
 
 checkStmt :: Stmt -> TcState -> String -> (VarTable, [Error])
-checkStmt stmt state@(_, vars) funcName = case stmt of
+checkStmt stmt state@(_, _, vars) funcName = case stmt of
     VariableStmt {} -> checkVariableStmt stmt state
     ReturnStmt {} -> (vars, checkReturnStmt stmt state funcName)
     PrintStmt expr -> (vars, checkExprStmt expr state)
@@ -47,7 +47,7 @@ checkStmt stmt state@(_, vars) funcName = case stmt of
     _ -> undefined
 
 checkIndexAssignmentStmt :: Stmt -> TcState -> [Error]
-checkIndexAssignmentStmt stmt state@(_, vars) = case stmt of
+checkIndexAssignmentStmt stmt state@(_, _, vars) = case stmt of
     (IndexAssignmentStmt name index expr loc) -> 
         exprErrors ++ indexExprErrors ++ indexErrors ++ assignErrors
         where
@@ -73,7 +73,7 @@ checkIndexAssignmentStmt stmt state@(_, vars) = case stmt of
     _ -> undefined
 
 checkAssignmentStmt :: Stmt -> TcState -> [Error]
-checkAssignmentStmt stmt state@(_, vars) = case stmt of
+checkAssignmentStmt stmt state@(_, _, vars) = case stmt of
     (AssignmentStmt name expr loc) -> exprErrors ++ assignErrors
         where
             vtype = VT.getVar name vars
@@ -118,7 +118,7 @@ checkExprStmt expr state =
     let (_, errors) = checkExpr expr state in errors
 
 checkReturnStmt :: Stmt -> TcState -> String -> [Error]
-checkReturnStmt stmt state@(funcs, _) funcName = case stmt of
+checkReturnStmt stmt state@(funcs, _, _) funcName = case stmt of
     (ReturnStmt expr loc) -> case retType of
         Nothing -> [("Function '" ++ name ++ "' shouldn't have a 'return' statement", loc)]
         Just rtype
@@ -131,7 +131,7 @@ checkReturnStmt stmt state@(funcs, _) funcName = case stmt of
     _ -> undefined
 
 checkVariableStmt :: Stmt -> TcState -> (VarTable, [Error])
-checkVariableStmt stmt state@(_, table) = case stmt of
+checkVariableStmt stmt state@(_, _, table) = case stmt of
     (VariableStmt name varType expr loc) ->
         let (exprType, exprErrors) = checkExpr expr state
         in  if compareType1 varType exprType
@@ -261,7 +261,7 @@ checkUnaryExpr expr state = case expr of
     _ -> undefined
 
 checkPrimaryExpr :: PrimaryExpr -> TcState -> (Maybe Type, [Error])
-checkPrimaryExpr expr state@(_, table) = case expr of
+checkPrimaryExpr expr state@(_, _, table) = case expr of
     (IntLit _) -> (Just $ BaseType "Int", [])
     (BoolLit _) -> (Just $ BaseType "Bool", [])
     (FloatLit _) -> (Just $ BaseType "Float", [])
@@ -275,7 +275,7 @@ checkPrimaryExpr expr state@(_, table) = case expr of
 
 -- TODO: Handle builtins
 checkCallExpr :: String -> [Expr] -> Location -> TcState -> (Maybe Type, [Error])
-checkCallExpr name params loc state@(funcs, _)
+checkCallExpr name params loc state@(funcs, builtins, _)
     | M.member name funcs =
         if lenDif > 0 then
             (retType, [("Too many arguments passed into function '" ++ name ++ "'", loc)])
@@ -284,18 +284,24 @@ checkCallExpr name params loc state@(funcs, _)
         else checkParams params params' loc [] 0
     | otherwise = (Nothing, [("Function '" ++ name ++ "' doesn't exist", loc)])
     where
-        (Function _ retType params' _ _) = fromJust $ M.lookup name funcs
+        (params', retType) = case M.lookup name builtins of
+            Just (Builtin prms rt) -> (prms, rt)
+            Nothing -> case M.lookup name funcs of
+                Just (Function _ rt prms _ _) -> (convertParams prms, rt)
+                Nothing -> undefined
         
+        convertParams = map (\(Parameter _ t _) -> t)
+
         lenDif = length params - length params'
 
         -- Hello darkness my old friend...
-        checkParams :: [Expr] -> [Parameter] -> Location -> [Error] -> Int -> (Maybe Type, [Error])
+        checkParams :: [Expr] -> [Type] -> Location -> [Error] -> Int -> (Maybe Type, [Error])
         checkParams [] [] _ errs _
             | null errs = (retType, errs)
             | otherwise = (retType, errs)
         checkParams [] _ _ _ _ = undefined -- Unreachable
         checkParams _ [] _ _ _ = undefined -- Unreachable
-        checkParams (x:xs) ((Parameter _ ptype _):ps) l errs i =
+        checkParams (x:xs) (ptype:ps) l errs i =
             let (etype, errors) = checkExpr x state 
             in if compareType1 ptype etype
             then checkParams xs ps l errs (i+1)

@@ -80,7 +80,8 @@ executable Haskell
         Interpreter,
         Interpreter.Internal,
         Interpreter.Value,
-        Optimizer
+        Optimizer,
+        Builtins
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
